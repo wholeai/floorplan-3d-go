@@ -44,12 +44,12 @@
 
 | 平台 | 文件 |
 | --- | --- |
-| Windows 10/11 x64 | `floorplan3d_1.2.0_windows_amd64.zip` |
-| Windows 10/11 ARM64 | `floorplan3d_1.2.0_windows_arm64.zip` |
-| macOS Apple Silicon（M 系列） | `floorplan3d_1.2.0_darwin_arm64.zip` |
-| macOS Intel | `floorplan3d_1.2.0_darwin_amd64.zip` |
-| Linux x86-64 | `floorplan3d_1.2.0_linux_amd64.zip` |
-| Linux ARM64（树莓派等） | `floorplan3d_1.2.0_linux_arm64.zip` |
+| Windows 10/11 x64 | `floorplan3d_1.3.0_windows_amd64.zip` |
+| Windows 10/11 ARM64 | `floorplan3d_1.3.0_windows_arm64.zip` |
+| macOS Apple Silicon（M 系列） | `floorplan3d_1.3.0_darwin_arm64.zip` |
+| macOS Intel | `floorplan3d_1.3.0_darwin_amd64.zip` |
+| Linux x86-64 | `floorplan3d_1.3.0_linux_amd64.zip` |
+| Linux ARM64（树莓派等） | `floorplan3d_1.3.0_linux_arm64.zip` |
 
 程序是静态单文件（约 11 MB，`index.html` 与 three.js 全部内嵌），不需要安装 Go、Node 或 SQLite。方案与用料清单存在同目录的 `data/plan.db`，拷走这个目录就完成迁移。
 
@@ -88,7 +88,7 @@ make test       # Go 单元测试（接口 + 子路径路由）
 make clean      # 清掉 dist/
 ```
 
-前端工程量 / 预算 / 风格套装的计算有一套断言自检，浏览器打开 `http://localhost:8787/?selftest=1` 即可跑，结果打在控制台并写进 `window.__selftest`（48 项断言，含地面用量的面积核对、门窗数量、人工费条目、预算公式、备注持久化）。
+前端工程量 / 预算 / 风格套装的计算有一套断言自检，浏览器打开 `http://localhost:8787/?selftest=1` 即可跑，结果打在控制台并写进 `window.__selftest`（50 项断言，含地面用量的面积核对、门窗数量、人工费条目、预算公式、备注持久化、打印表行数）。
 
 六个平台产物：`linux/{amd64,arm64}`、`darwin/{amd64,arm64}`、`windows/{amd64,arm64}`。
 
@@ -153,6 +153,7 @@ make clean      # 清掉 dist/
 - 清单底部有整案两段备注：**装修需求与风格说明**、**施工与验收备注**
 - 每个房间单独写备注（右面板选中房间）：例如「主卧要护墙板」「厨房留洗碗机位」
 - 「文件 → 导出装修简报 (Markdown)」把风格、面积、需求、施工备注、房间备注、预算表和完整清单打成一份 `.md`，可直接发给设计师或工长
+- 清单里的「打印 / PDF」会渲染一张纯文本的 A4 横向报价单（含分类小计与备注），直接打印或另存 PDF 给工长；`?print=1` 可以先在屏幕上看打印效果
 
 **方案与统计**
 - 房间面积与套内使用面积自动统计
@@ -203,6 +204,10 @@ location /floorplan/ {
 后端用 `./floorplan3d -addr 127.0.0.1:8801 -no-open` 起在回环地址上，只让 nginx 访问。
 
 > 关键是**地址必须以 `/` 结尾**（`/floorplan/`）。`/floorplan` 后面没有斜杠时，浏览器会把相对路径解析到站点根目录，静态资源和 `/api` 全部 404，所以上面两处都做了 301。
+
+## 手机上用
+
+界面是响应式的：窄屏下弹窗改为单列、预算条自动换行，家具库与面板可以用顶栏按钮收起。手机上打开 `http://<电脑IP>:8787` 即可（程序默认监听全部网卡，`data/plan.db` 仍是同一份）。
 
 ## 技术栈
 

@@ -200,6 +200,39 @@ main.animating #hint3d{opacity:0}
 .bom-notes-body textarea{width:100%;border:1px solid var(--line);border-radius:7px;padding:7px 8px;font:12px/1.55 inherit;color:var(--ink);resize:vertical;background:#fff}
 .bom-notes-body label span{font-weight:600}
 #roomNotes{grid-column:1/-1;font-size:11px;line-height:1.7;border-top:1px dashed var(--line);padding-top:8px}
+/* 打印 / 存 PDF：单独渲染一张纯文本表格（输入框内容不会截断）。
+   ?print=1 时给 body 加 .printing，套用同一批规则在屏幕上看效果。 */
+#printSheet{display:none;font:12px/1.5 -apple-system,'PingFang SC','Microsoft YaHei',sans-serif;color:#111}
+#printSheet h1{font-size:17px;margin:0 0 2px}
+#printSheet .meta{color:#555;margin-bottom:8px}
+#printSheet .sum{margin:8px 0;padding:6px 8px;border:1px solid #bbb;border-radius:4px}
+#printSheet .sum b{font-size:14px}
+#printSheet table{width:100%;border-collapse:collapse;font-size:11px}
+#printSheet th{text-align:left;border-bottom:1.5px solid #333;padding:4px 3px;background:#f4f1ea}
+#printSheet td{border-bottom:1px solid #ddd;padding:3px;vertical-align:top}
+#printSheet td.r{text-align:right;font-variant-numeric:tabular-nums}
+#printSheet tfoot td{border-top:1.5px solid #333;font-weight:600}
+#printSheet h2{font-size:12px;margin:12px 0 4px}
+#printSheet .notes{white-space:pre-wrap;color:#222}
+#printSheet .cats td{border:0;padding:1px 3px}
+@media print{
+  @page{size:A4 landscape;margin:10mm}
+  body{background:#fff}
+  body > *:not(#printSheet){display:none !important}
+  #printSheet{display:block}
+  #printSheet tr{page-break-inside:avoid}
+  #printSheet table{page-break-inside:auto}
+}
+body.printing > *:not(#printSheet){display:none !important}
+body.printing #printSheet{display:block}
+
+@media (max-width:760px){
+  .bom-notes-body{grid-template-columns:1fr}
+  .bom-bar{gap:6px;font-size:11px}
+  .bom-bar input{width:64px}
+  .cat-row{grid-template-columns:5.5em 1fr 5em 5.5em;font-size:11px}
+  .cat-row .p{font-size:10px}
+}
 #itemsTbl input,#itemsTbl select{width:100%;border:1px solid transparent;background:transparent;padding:5px 4px;border-radius:5px;font:inherit}
 #itemsTbl input:hover,#itemsTbl select:hover{border-color:var(--line)}
 #itemsTbl input:focus,#itemsTbl select:focus{border-color:var(--accent);background:#fff;outline:none}
@@ -403,6 +436,7 @@ main.drawer-panel #fab{opacity:0;visibility:hidden}
 </div>
 <div id="toast"></div>
 
+<div id="printSheet"></div>
 <div id="itemsDlg" class="dlg">
   <div class="dlg-card">
     <div class="dlg-head">
@@ -412,6 +446,7 @@ main.drawer-panel #fab{opacity:0;visibility:hidden}
       <button class="btn" id="itemsGen" data-en="Fill from plan">从方案生成用量</button>
       <button class="btn" id="itemsAdd" data-en="Add row">+ 添加一行</button>
       <button class="btn" id="itemsCsv" data-en="Export CSV">导出 CSV</button>
+      <button class="btn" id="itemsPrint" title="打印或另存为 PDF（只打清单，A4 友好）" data-en-title="Print or save as PDF (list only, A4 friendly)" data-en="Print / PDF">打印 / PDF</button>
       <button class="btn primary" id="itemsClose" data-en="Close">关闭</button>
     </div>
     <div class="bom-bar" id="itemsBudget"></div>
@@ -438,9 +473,11 @@ main.drawer-panel #fab{opacity:0;visibility:hidden}
       <summary data-en="Decoration notes (requirements / site notes)">装修备注（需求 / 施工）</summary>
       <div class="bom-notes-body">
         <label><span data-en="Requirements & style brief">装修需求与风格说明</span>
-          <textarea id="noteDemand" rows="3" placeholder="例：三房自住，想要简洁、好打理；主卧要有大衣柜和书桌；厨房要能放洗碗机；预算控制在 18 万以内。"></textarea></label>
+          <textarea id="noteDemand" rows="3" data-en-ph="e.g. Three-bedroom home for our own use, simple and easy to clean; a large wardrobe and desk in the master; space for a dishwasher; keep the budget under ¥180k."
+            placeholder="例：三房自住，想要简洁、好打理；主卧要有大衣柜和书桌；厨房要能放洗碗机；预算控制在 18 万以内。"></textarea></label>
         <label><span data-en="Site notes / workmanship & acceptance">施工与验收备注</span>
-          <textarea id="noteExec" rows="3" placeholder="例：水电要走顶；卫生间做二次防水、闭水试验 48h；地板铺前做地面找平；柜体与墙之间打胶收口。"></textarea></label>
+          <textarea id="noteExec" rows="3" data-en-ph="e.g. Run plumbing and wiring along the ceiling; double waterproofing plus a 48 h flood test in the bathroom; level the floor before laying; seal cabinets to the wall."
+            placeholder="例：水电要走顶；卫生间做二次防水、闭水试验 48h；地板铺前做地面找平；柜体与墙之间打胶收口。"></textarea></label>
         <div class="muted" id="roomNotes"></div>
       </div>
     </details>
@@ -485,6 +522,7 @@ function applyStaticLang(){
   document.title = tr('户型装修设计', 'Floor Plan Designer');
   document.querySelectorAll('[data-en]').forEach(el => { el.dataset.zh ??= el.textContent; el.textContent = tr(el.dataset.zh, el.dataset.en); });
   document.querySelectorAll('[data-en-title]').forEach(el => { el.dataset.zhTitle ??= el.title; el.title = tr(el.dataset.zhTitle, el.dataset.enTitle); });
+  document.querySelectorAll('[data-en-ph]').forEach(el => { el.dataset.zhPh ??= el.placeholder; el.placeholder = tr(el.dataset.zhPh, el.dataset.enPh); });
   document.querySelectorAll('#langSel [data-lang]').forEach(b => { const on = b.dataset.lang === LANG; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
 }
 
@@ -2119,6 +2157,43 @@ $('#itemsGen').onclick = () => {
     'This recalculates every auto row from the current plan (floors, walls, ceilings, doors/windows, hardware, lighting, bath, cabinets, soft furnishings, consumables, furniture). Your brand, spec, notes and prices are kept; hand-written rows under other categories stay untouched. Continue?'))) return;
   genItems();
 };
+// 打印 / 存 PDF：生成一张纯文本清单（输入框没法打印完整内容，所以单独渲染）
+function renderPrintSheet(){
+  const t = budgetTotals(), st = STYLES[state.style] || STYLES.modern;
+  const by = new Map();
+  items.forEach(it => { const c = it.category || '其他', v = (+it.qty || 0) * (+it.price || 0);
+    by.set(c, (by.get(c) || 0) + v); });
+  const row = it => {
+    const amt = Math.round((+it.qty || 0) * (+it.price || 0));
+    return `<tr><td>${esc(it.category)}</td><td>${esc(it.name)}</td><td>${esc(it.brand)}</td><td>${esc(it.spec)}</td>
+      <td class="r">${it.qty || ''}</td><td>${esc(it.unit)}</td><td class="r">${it.price || ''}</td>
+      <td class="r">${amt ? amt.toLocaleString() : ''}</td><td>${esc(it.note)}</td></tr>`;
+  };
+  const roomNotes = ROOMS.filter(r => (state.rooms[r.id].note || '').trim())
+    .map(r => `${nm(state.rooms[r.id].name)}：${state.rooms[r.id].note.trim()}`);
+  $('#printSheet').innerHTML = `
+    <h1>${tr('户型装修 · 用料与预算清单','Floor plan · materials & budget')}</h1>
+    <div class="meta">${tr('风格','Style')}：${styleName(state.style)}　·　${tr('套内面积','Net area')}：
+      ${fmt(ROOMS.filter(r => r.counted !== false).reduce((a, r) => a + area(r.poly), 0))} m²　·　
+      ${tr('条目','Rows')}：${items.length}　·　${new Date().toLocaleString()}</div>
+    <div class="sum">${tr('合计','Total')} <b>${money(t.sum)}</b>　|　${tr('预留','Reserve')} ${t.reserve}%
+      → ${tr('含预留','with reserve')} <b>${money(t.total)}</b>${t.cap
+        ? `　|　${tr('预算上限','Cap')} ${money(t.cap)}　|　${t.left < 0 ? tr('超支','Over') : tr('余量','Left')} <b>${money(Math.abs(t.left))}</b>` : ''}</div>
+    <table><thead><tr>
+      <th>${tr('分类','Category')}</th><th>${tr('名称','Item')}</th><th>${tr('品牌','Brand')}</th><th>${tr('规格型号','Spec')}</th>
+      <th>${tr('用量','Qty')}</th><th>${tr('单位','Unit')}</th><th>${tr('单价','Price')}</th><th>${tr('金额','Amount')}</th><th>${tr('备注','Notes')}</th>
+    </tr></thead><tbody>${items.map(row).join('')}</tbody>
+    <tfoot><tr><td colspan="7">${tr('合计','Total')}</td><td class="r">${Math.round(t.sum).toLocaleString()}</td><td></td></tr></tfoot></table>
+    <h2>${tr('分类小计','Subtotals')}</h2>
+    <table class="cats"><tbody>${[...by.entries()].sort((a, b) => b[1] - a[1])
+      .map(([c, v]) => `<tr><td>${esc(c)}</td><td class="r">${money(v)}</td><td class="r">${(v / (t.sum || 1) * 100).toFixed(1)}%</td></tr>`).join('')}</tbody></table>
+    <h2>${tr('装修需求与风格说明','Requirements')}</h2><div class="notes">${esc(notesOf().demand || '—')}</div>
+    <h2>${tr('施工与验收备注','Site notes')}</h2><div class="notes">${esc(notesOf().exec || '—')}</div>
+    ${roomNotes.length ? `<h2>${tr('房间备注','Room notes')}</h2><div class="notes">${esc(roomNotes.join('\n'))}</div>` : ''}
+    <div class="meta" style="margin-top:10px">${tr('单价为参考值，请按实际报价调整。','Unit prices are references; replace them with your quotes.')}</div>`;
+}
+$('#itemsPrint').onclick = () => { renderPrintSheet(); document.body.classList.add('printing'); setTimeout(() => window.print(), 80); };
+window.addEventListener('afterprint', () => document.body.classList.remove('printing'));
 $('#itemsCsv').onclick = () => {
   const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
   const head = ['分类','名称','品牌','规格型号','用量','单位','单价','金额','备注'].map(q).join(',');
@@ -2206,8 +2281,17 @@ function selftest(){
   ok(rt.rooms.bedB.note === '主卧要护墙板', 'room note survives plan JSON round trip');
   state.notes = {demand:'', exec:''}; delete state.rooms.bedB.note;
 
+  // 8. 打印表：条目一条不少，合计出现在表头摘要里
+  renderPrintSheet();
+  const sheetRows = document.querySelectorAll('#printSheet table:first-of-type tbody tr').length;   // 只数清单表，不含分类小计
+  ok(sheetRows === items.length, `print sheet rows ${sheetRows} = items ${items.length}`);
+  ok($('#printSheet').textContent.includes(money(budgetTotals().sum)), 'print sheet shows the budget total');
+
   items = bak;
   return {pass: pass.length, fail: fail.length, failures: fail, passes: pass};
+}
+if (new URLSearchParams(location.search).has('print')){
+  loadItems().then(() => { renderPrintSheet(); document.body.classList.add('printing'); });
 }
 if (new URLSearchParams(location.search).has('selftest')){
   const res = selftest();

@@ -45,12 +45,12 @@ Grab the archive for your platform from [Releases](https://github.com/wholeai/fl
 
 | Platform | File |
 | --- | --- |
-| Windows 10/11 x64 | `floorplan3d_1.2.0_windows_amd64.zip` |
-| Windows 10/11 ARM64 | `floorplan3d_1.2.0_windows_arm64.zip` |
-| macOS Apple Silicon (M-series) | `floorplan3d_1.2.0_darwin_arm64.zip` |
-| macOS Intel | `floorplan3d_1.2.0_darwin_amd64.zip` |
-| Linux x86-64 | `floorplan3d_1.2.0_linux_amd64.zip` |
-| Linux ARM64 (Raspberry Pi etc.) | `floorplan3d_1.2.0_linux_arm64.zip` |
+| Windows 10/11 x64 | `floorplan3d_1.3.0_windows_amd64.zip` |
+| Windows 10/11 ARM64 | `floorplan3d_1.3.0_windows_arm64.zip` |
+| macOS Apple Silicon (M-series) | `floorplan3d_1.3.0_darwin_arm64.zip` |
+| macOS Intel | `floorplan3d_1.3.0_darwin_amd64.zip` |
+| Linux x86-64 | `floorplan3d_1.3.0_linux_amd64.zip` |
+| Linux ARM64 (Raspberry Pi etc.) | `floorplan3d_1.3.0_linux_arm64.zip` |
 
 The binary is a static single file (~11 MB; `index.html` and three.js are embedded). No Go, Node or SQLite install required. Plans and the materials list live in `data/plan.db` next to the binary — copy that folder to move everything to another machine.
 
@@ -89,7 +89,7 @@ make test       # Go unit tests (API + sub-path routing)
 make clean      # remove dist/
 ```
 
-The front-end quantity, budget and style-pack math has an assertion self-check: open `http://localhost:8787/?selftest=1`, results go to the console and to `window.__selftest` (48 assertions covering flooring area totals, door/window counts, labour rows, budget formulas and note persistence).
+The front-end quantity, budget and style-pack math has an assertion self-check: open `http://localhost:8787/?selftest=1`, results go to the console and to `window.__selftest` (50 assertions covering flooring area totals, door/window counts, labour rows, budget formulas, note persistence and the print sheet).
 
 Targets: `linux/{amd64,arm64}`, `darwin/{amd64,arm64}`, `windows/{amd64,arm64}`.
 
@@ -154,6 +154,7 @@ Cross-compiling works because the SQLite driver is a [pure-Go implementation](ht
 - Two project-level notes at the bottom of the list: **requirements & style brief** and **site / workmanship notes**
 - A note per room (open a room in the side panel), e.g. "headboard wall panelling", "leave space for a dishwasher"
 - "File → Export brief (Markdown)" packs the style, areas, requirements, site notes, room notes, budget table and the full materials list into one `.md` you can send straight to a designer or contractor
+- "Print / PDF" in the materials dialog renders a plain-text A4 landscape quote sheet (with category subtotals and notes) ready to print or save as PDF; `?print=1` previews it on screen first
 
 **Plans & statistics**
 - Automatic calculation of room areas and net usable floor area
@@ -206,6 +207,10 @@ A complete site config (long-lived asset caching, PUT body limit) is in
 
 > The URL **must end with a slash** (`/floorplan/`). At `/floorplan` the browser resolves relative paths
 > against the site root, so every asset and `/api` call 404s — hence the 301s above.
+
+## On a phone
+
+The UI is responsive: on narrow screens dialogs switch to a single column, the budget bar wraps, and the furniture library / side panel collapse from the top bar. Open `http://<your-computer-ip>:8787` on the phone — the server listens on all interfaces and keeps using the same `data/plan.db`.
 
 ## Tech stack
 
