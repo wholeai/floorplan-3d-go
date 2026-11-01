@@ -44,12 +44,12 @@
 
 | 平台 | 文件 |
 | --- | --- |
-| Windows 10/11 x64 | `floorplan3d_1.1.0_windows_amd64.zip` |
-| Windows 10/11 ARM64 | `floorplan3d_1.1.0_windows_arm64.zip` |
-| macOS Apple Silicon（M 系列） | `floorplan3d_1.1.0_darwin_arm64.zip` |
-| macOS Intel | `floorplan3d_1.1.0_darwin_amd64.zip` |
-| Linux x86-64 | `floorplan3d_1.1.0_linux_amd64.zip` |
-| Linux ARM64（树莓派等） | `floorplan3d_1.1.0_linux_arm64.zip` |
+| Windows 10/11 x64 | `floorplan3d_1.2.0_windows_amd64.zip` |
+| Windows 10/11 ARM64 | `floorplan3d_1.2.0_windows_arm64.zip` |
+| macOS Apple Silicon（M 系列） | `floorplan3d_1.2.0_darwin_arm64.zip` |
+| macOS Intel | `floorplan3d_1.2.0_darwin_amd64.zip` |
+| Linux x86-64 | `floorplan3d_1.2.0_linux_amd64.zip` |
+| Linux ARM64（树莓派等） | `floorplan3d_1.2.0_linux_arm64.zip` |
 
 程序是静态单文件（约 11 MB，`index.html` 与 three.js 全部内嵌），不需要安装 Go、Node 或 SQLite。方案与用料清单存在同目录的 `data/plan.db`，拷走这个目录就完成迁移。
 
@@ -88,7 +88,7 @@ make test       # Go 单元测试（接口 + 子路径路由）
 make clean      # 清掉 dist/
 ```
 
-前端工程量 / 预算 / 风格套装的计算有一套断言自检，浏览器打开 `http://localhost:8787/?selftest=1` 即可跑，结果打在控制台并写进 `window.__selftest`（46 项断言，含地面用量的面积核对、门窗数量、预算公式、备注持久化）。
+前端工程量 / 预算 / 风格套装的计算有一套断言自检，浏览器打开 `http://localhost:8787/?selftest=1` 即可跑，结果打在控制台并写进 `window.__selftest`（48 项断言，含地面用量的面积核对、门窗数量、人工费条目、预算公式、备注持久化）。
 
 六个平台产物：`linux/{amd64,arm64}`、`darwin/{amd64,arm64}`、`windows/{amd64,arm64}`。
 
@@ -119,7 +119,7 @@ make clean      # 清掉 dist/
 
 **建材物料清单（按户型自动算量）**
 - 顶栏「用料清单」打开表格：分类 / 名称 / 品牌 / 规格型号 / 用量 / 单位 / 单价 / 备注
-- 「从方案生成用量」按当前户型算出 **15 类、约 70 条**用量：
+- 「从方案生成用量」按当前户型算出 **16 类、约 75 条**用量（含人工费）：
 
   | 分类 | 自动算出的条目举例 | 怎么算的 |
   | --- | --- | --- |
@@ -134,9 +134,12 @@ make clean      # 清掉 dist/
   | 橱柜 | 地柜、吊柜、石英石台面、水槽龙头 | 厨房周长 × 0.5 / 0.3 |
   | 软装 | 窗帘（两倍褶）、窗帘杆 | 窗宽合计 × 2 / × 1.15 |
   | 辅料 | 水泥砂浆、防水涂料、美缝剂、电线、PPR 水管、密封胶 | 铺砖面积 × 3cm、厨卫上返 30cm、每 m² 6m 电线… |
+  | 人工 | 水电改造、瓦工铺贴、木工吊顶、油漆工、安装人工 | 按面积 / 房间数估算，参考单价，实际以施工队报价为准 |
   | 家具 / 家电 / 柜体 | 按名称计数并写明所在房间 | 图上的家具，带参考单价（马桶 / 台面等与卫浴、橱柜主材互斥，不重复计价） |
 
 - 品牌、规格、备注、单价自己填，**重新生成不会冲掉**；单价是参考值，改成实际报价即可
+- 「品牌」输入框带 50+ 常用品牌候选（圣象 / 马可波罗 / 立邦 / 科勒 / 欧派 / 东方雨虹 / 海尔 …），点开即可选，也能直接手打
+- 改用量或单价时，顶部预算条与分类小计**实时跟着变**
 - 可导出 CSV（带 BOM，Excel 直接打开）
 
 **装修预算**

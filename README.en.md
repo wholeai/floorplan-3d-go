@@ -45,12 +45,12 @@ Grab the archive for your platform from [Releases](https://github.com/wholeai/fl
 
 | Platform | File |
 | --- | --- |
-| Windows 10/11 x64 | `floorplan3d_1.1.0_windows_amd64.zip` |
-| Windows 10/11 ARM64 | `floorplan3d_1.1.0_windows_arm64.zip` |
-| macOS Apple Silicon (M-series) | `floorplan3d_1.1.0_darwin_arm64.zip` |
-| macOS Intel | `floorplan3d_1.1.0_darwin_amd64.zip` |
-| Linux x86-64 | `floorplan3d_1.1.0_linux_amd64.zip` |
-| Linux ARM64 (Raspberry Pi etc.) | `floorplan3d_1.1.0_linux_arm64.zip` |
+| Windows 10/11 x64 | `floorplan3d_1.2.0_windows_amd64.zip` |
+| Windows 10/11 ARM64 | `floorplan3d_1.2.0_windows_arm64.zip` |
+| macOS Apple Silicon (M-series) | `floorplan3d_1.2.0_darwin_arm64.zip` |
+| macOS Intel | `floorplan3d_1.2.0_darwin_amd64.zip` |
+| Linux x86-64 | `floorplan3d_1.2.0_linux_amd64.zip` |
+| Linux ARM64 (Raspberry Pi etc.) | `floorplan3d_1.2.0_linux_arm64.zip` |
 
 The binary is a static single file (~11 MB; `index.html` and three.js are embedded). No Go, Node or SQLite install required. Plans and the materials list live in `data/plan.db` next to the binary — copy that folder to move everything to another machine.
 
@@ -89,7 +89,7 @@ make test       # Go unit tests (API + sub-path routing)
 make clean      # remove dist/
 ```
 
-The front-end quantity, budget and style-pack math has an assertion self-check: open `http://localhost:8787/?selftest=1`, results go to the console and to `window.__selftest` (46 assertions covering flooring area totals, door/window counts, budget formulas and note persistence).
+The front-end quantity, budget and style-pack math has an assertion self-check: open `http://localhost:8787/?selftest=1`, results go to the console and to `window.__selftest` (48 assertions covering flooring area totals, door/window counts, labour rows, budget formulas and note persistence).
 
 Targets: `linux/{amd64,arm64}`, `darwin/{amd64,arm64}`, `windows/{amd64,arm64}`.
 
@@ -120,7 +120,7 @@ Cross-compiling works because the SQLite driver is a [pure-Go implementation](ht
 
 **Materials list (quantities derived from your plan)**
 - "BOM" button opens an editable table: category, item, brand, spec/model, qty, unit, unit price, notes
-- "Fill from plan" derives **~70 rows across 15 categories** from the current plan:
+- "Fill from plan" derives **~75 rows across 16 categories** from the current plan (labour included):
 
   | Category | Examples | How it is derived |
   | --- | --- | --- |
@@ -135,9 +135,12 @@ Cross-compiling works because the SQLite driver is a [pure-Go implementation](ht
   | Cabinets | base/wall units, quartz countertop, sink & tap | kitchen perimeter × 0.5 / 0.3 |
   | Soft furnishings | curtains (2× fullness), curtain track | total window width × 2 / × 1.15 |
   | Consumables | mortar, waterproofing, grout sealer, cable, PPR pipe, sealant | tiled area × 30 mm, wet areas + 30 cm upstand, 6 m cable per m², … |
+  | Labour | plumbing & electrical, tiling, ceiling, painting, installation | estimated from areas / room count at reference rates; your contractor's quote wins |
   | Furniture / appliances / cabinets | counted by name with the rooms they sit in | items placed on the plan, with reference prices (toilets and countertops are not double-counted with the bath/cabinet rows) |
 
 - Brand, spec, notes and price are yours to fill and **survive regeneration**; unit prices are references — replace them with your quotes
+- The "brand" field suggests 50+ common brands (Shengxiang / Marco Polo / Nippon / Kohler / Oppein / Oriental Yuhong / Haier …) while still accepting free text
+- Editing a quantity or price updates the budget bar and category subtotals immediately
 - Export to CSV (with BOM, opens directly in Excel)
 
 **Budget**

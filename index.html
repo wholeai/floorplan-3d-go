@@ -417,6 +417,19 @@ main.drawer-panel #fab{opacity:0;visibility:hidden}
     <div class="bom-bar" id="itemsBudget"></div>
     <div class="dlg-body">
       <details class="bom-fold" id="itemsCatsWrap"><summary data-en="Subtotals by category">分类小计 / 预算占比</summary><div id="itemsCats"></div></details>
+      <datalist id="brands">
+        <option>圣象</option><option>大自然</option><option>德尔</option><option>菲林格尔</option><option>生活家</option>
+        <option>马可波罗</option><option>东鹏</option><option>诺贝尔</option><option>蒙娜丽莎</option><option>冠珠</option>
+        <option>立邦</option><option>多乐士</option><option>三棵树</option><option>嘉宝莉</option><option>芬琳</option>
+        <option>科勒</option><option>TOTO</option><option>箭牌</option><option>九牧</option><option>恒洁</option><option>摩恩</option>
+        <option>欧派</option><option>索菲亚</option><option>志邦</option><option>金牌</option><option>尚品宅配</option><option>兔宝宝</option>
+        <option>皇派</option><option>新豪轩</option><option>旭格</option><option>王力</option><option>盼盼</option>
+        <option>飞利浦</option><option>欧普</option><option>雷士</option><option>松下</option><option>三雄极光</option>
+        <option>海蒂诗</option><option>百隆</option><option>DTC</option><option>悍高</option>
+        <option>东方雨虹</option><option>德高</option><option>西卡</option><option>马贝</option>
+        <option>海尔</option><option>美的</option><option>格力</option><option>西门子</option><option>方太</option><option>老板</option>
+        <option>如鱼得水</option><option>摩力克</option>
+      </datalist>
       <table id="itemsTbl"><thead><tr>
       <th data-en="Category">分类</th><th data-en="Item">名称</th><th data-en="Brand">品牌</th><th data-en="Spec">规格型号</th>
       <th data-en="Qty">用量</th><th data-en="Unit">单位</th><th data-en="Price">单价</th><th data-en="Notes">备注</th><th></th>
@@ -1774,8 +1787,8 @@ $('#furnAll').onclick = () => setFurnVisible(!ui.layers.furn);
 const ITEM_STORE = 'huxing-items-v1';
 // 「从方案生成」管理的分类（其余分类的条目原样保留）
 const AUTO_CATS = ['地面','墙面','顶面','瓷砖石材','门窗','五金','灯具','卫浴','橱柜','踢脚线',
-  '家具','家电','柜体','软装','辅料'];
-const ITEM_CATS = [...AUTO_CATS, '油漆','主材','人工','其他'];
+  '家具','家电','柜体','软装','辅料','人工'];
+const ITEM_CATS = [...AUTO_CATS, '油漆','主材','其他'];
 let items = [];
 
 async function loadItems(){
@@ -1868,7 +1881,7 @@ function renderItems(){
     return `<tr>
     <td><select data-i="${i}" data-k="category">${cats.map(c => `<option${c === it.category ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></td>
     <td><input data-i="${i}" data-k="name" value="${esc(it.name)}" placeholder="${tr('如：橡木地板 / 岩板台面','e.g. oak flooring')}"></td>
-    <td><input data-i="${i}" data-k="brand" value="${esc(it.brand)}" placeholder="${tr('品牌','brand')}"></td>
+    <td><input data-i="${i}" data-k="brand" list="brands" value="${esc(it.brand)}" placeholder="${tr('品牌','brand')}"></td>
     <td><input data-i="${i}" data-k="spec" value="${esc(it.spec)}" placeholder="${tr('型号 / 规格','model / spec')}"></td>
     <td><input class="num" data-i="${i}" data-k="qty" value="${it.qty || ''}" inputmode="decimal" style="width:70px"></td>
     <td><input data-i="${i}" data-k="unit" value="${esc(it.unit)}" style="width:48px"></td>
@@ -1884,7 +1897,7 @@ $('#itemsTbl').addEventListener('input', e => {
   const el = e.target, k = el.dataset.k; if (!k) return;
   const it = items[+el.dataset.i]; if (!it) return;
   it[k] = (k === 'qty' || k === 'price') ? (parseFloat(el.value) || 0) : el.value;
-  saveItems(); itemsSum();
+  saveItems(); itemsSum(); renderBudget(); renderCats();   // 改用量 / 单价要立刻反映到预算条
 });
 $('#itemsTbl').addEventListener('click', e => {
   const b = e.target.closest('[data-del]'); if (!b) return;
@@ -2071,6 +2084,15 @@ function buildItems(){
   add('辅料', tr('PPR 水管','PPR water pipe'), wetP * 1.5 + R.of('balcony').length * 8, 'm', 25, '');
   add('辅料', tr('玻璃胶 / 密封胶','Silicone sealant'), R.list.length * 2, '支', 35, '');
 
+  /* --- 人工费：按面积 / 数量估参考价，实际以施工队报价为准 --- */
+  add('人工', tr('水电改造人工','Plumbing & electrical labour'), R.totArea, 'm²', 130,
+    tr('按套内面积估算，参考价','Estimated from net floor area; reference price'));
+  add('人工', tr('瓦工铺贴人工','Tiling labour'), tilesA, 'm²', 90, tr('按铺砖面积估算','Per tiled area'));
+  add('人工', tr('木工吊顶人工','Ceiling labour'), ceilTiles + ceilBoard, 'm²', 80, tr('按吊顶面积估算','Per ceiling area'));
+  add('人工', tr('油漆工人工','Painting labour'), paint, 'm²', 28, tr('按涂刷面积估算','Per painted area'));
+  add('人工', tr('安装人工（门 / 柜 / 洁具 / 灯具）','Installation labour'), R.list.length, '间', 260,
+    tr('按房间数估算','Per room'), );
+
   /* --- 家具 / 柜体 / 家电：按名称计数 --- */
   const grp = new Map();
   state.furniture.forEach(f => { const g = grp.get(f.name) || {name:f.name, n:0, type:f.type, rooms:new Set()};
@@ -2134,11 +2156,15 @@ function selftest(){
   // 2. 工程量：分类覆盖、每行都有名称/单位/正数用量
   const r = buildItems();
   const cats = new Set(r.rows.map(x => x.category));
-  ok(r.rows.length >= 40, `bom rows = ${r.rows.length} (≥40)`);
+  ok(r.rows.length >= 70, `bom rows = ${r.rows.length} (≥70)`);
   ok(cats.size >= 10, `bom categories = ${cats.size} (≥10): ${[...cats].join('/')}`);
   ok(r.rows.every(x => x.name && x.unit && x.qty > 0 && x.category), 'every row has name, category, unit and qty > 0');
-  ok(['地面','墙面','顶面','瓷砖石材','门窗','五金','灯具','卫浴','橱柜','软装','辅料'].every(c => cats.has(c)),
+  ok(['地面','墙面','顶面','瓷砖石材','门窗','五金','灯具','卫浴','橱柜','软装','辅料','人工'].every(c => cats.has(c)),
     'core material categories all present');
+  // 人工费按面积 / 房间估算，必须都是正数、有单位
+  const labour = r.rows.filter(x => x.category === '人工');
+  ok(labour.length >= 5 && labour.every(x => x.qty > 0 && x.unit), `labour rows = ${labour.length} (≥5)`);
+  ok(labour.some(x => x.name.includes('水电')) && labour.some(x => x.name.includes('油漆')), 'labour covers plumbing and painting');
 
   // 3. 地面用量 = 各房间面积 × 1.05，按材质分组后总量对得上
   const floorRows = r.rows.filter(x => x.category === '地面');
