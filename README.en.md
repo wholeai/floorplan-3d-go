@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Go](https://img.shields.io/badge/go-1.26-00ADD8?logo=go)](go.mod)
 
-Design the interior of your own floor plan: **lay out furniture, remove walls and take measurements on a 2D plan, then switch to a 3D scene with one click** — bird's-eye or first-person walkthrough. One small binary, no install, data kept in a local SQLite file.
+Design the interior of your own floor plan: **lay out furniture, remove walls and take measurements on a 2D plan, then switch to a 3D scene with one click** — bird's-eye or first-person walkthrough. Ten style packs with a one-click preview, a materials list derived from your actual geometry with a budget cap and overspend warning, and a Markdown brief you can hand to a designer or contractor. One small binary, no install, data kept in a local SQLite file.
 
 > **Built on top of [wy51ai/floorplan-3d](https://github.com/wy51ai/floorplan-3d)** (MIT, 3.3k stars):
 > this fork adds a Go + SQLite backend, vendors three.js locally (no CDN requests), supports sub-path
@@ -21,11 +21,21 @@ Design the interior of your own floor plan: **lay out furniture, remove walls an
 | --- | --- |
 | ![2D](docs/screenshots/01-2d-plan.png) | ![3D modern](docs/screenshots/02-3d-modern.png) |
 
-| 3D bird's-eye (New Chinese pack) | Shell mode: bare structure only |
-| --- | --- |
-| ![3D chinese](docs/screenshots/03-3d-chinese.png) | ![shell](docs/screenshots/05-shell.png) |
+**One plan, one-click style packs** (a pack = flooring + wall/trim paint + furniture palette, undoable)
 
-**Materials & notes list** (brand / spec / qty / unit price / notes, CSV export)
+| New Chinese | Japandi |
+| --- | --- |
+| ![3D chinese](docs/screenshots/03-3d-chinese.png) | ![3D japandi](docs/screenshots/06-3d-japandi.png) |
+
+| Cream | Industrial |
+| --- | --- |
+| ![3D cream](docs/screenshots/07-3d-cream.png) | ![3D industrial](docs/screenshots/08-3d-industrial.png) |
+
+| Shell mode: bare structure only | Budget panel: cap, reserve, share by category |
+| --- | --- |
+| ![shell](docs/screenshots/05-shell.png) | ![budget](docs/screenshots/09-budget.png) |
+
+**Materials & notes list**: quantities derived from your plan, plus the budget
 
 ![materials list](docs/screenshots/04-materials.png)
 
@@ -35,12 +45,12 @@ Grab the archive for your platform from [Releases](https://github.com/wholeai/fl
 
 | Platform | File |
 | --- | --- |
-| Windows 10/11 x64 | `floorplan3d_1.0.0_windows_amd64.zip` |
-| Windows 10/11 ARM64 | `floorplan3d_1.0.0_windows_arm64.zip` |
-| macOS Apple Silicon (M-series) | `floorplan3d_1.0.0_darwin_arm64.zip` |
-| macOS Intel | `floorplan3d_1.0.0_darwin_amd64.zip` |
-| Linux x86-64 | `floorplan3d_1.0.0_linux_amd64.zip` |
-| Linux ARM64 (Raspberry Pi etc.) | `floorplan3d_1.0.0_linux_arm64.zip` |
+| Windows 10/11 x64 | `floorplan3d_1.1.0_windows_amd64.zip` |
+| Windows 10/11 ARM64 | `floorplan3d_1.1.0_windows_arm64.zip` |
+| macOS Apple Silicon (M-series) | `floorplan3d_1.1.0_darwin_arm64.zip` |
+| macOS Intel | `floorplan3d_1.1.0_darwin_amd64.zip` |
+| Linux x86-64 | `floorplan3d_1.1.0_linux_amd64.zip` |
+| Linux ARM64 (Raspberry Pi etc.) | `floorplan3d_1.1.0_linux_arm64.zip` |
 
 The binary is a static single file (~11 MB; `index.html` and three.js are embedded). No Go, Node or SQLite install required. Plans and the materials list live in `data/plan.db` next to the binary — copy that folder to move everything to another machine.
 
@@ -75,9 +85,11 @@ No backend needed either: open `index.html` directly (or `python3 -m http.server
 make            # current platform → dist/floorplan3d
 make release    # all six platforms as zips + SHA256SUMS → dist/
 make run        # go run .
-make test       # unit tests
+make test       # Go unit tests (API + sub-path routing)
 make clean      # remove dist/
 ```
+
+The front-end quantity, budget and style-pack math has an assertion self-check: open `http://localhost:8787/?selftest=1`, results go to the console and to `window.__selftest` (46 assertions covering flooring area totals, door/window counts, budget formulas and note persistence).
 
 Targets: `linux/{amd64,arm64}`, `darwin/{amd64,arm64}`, `windows/{amd64,arm64}`.
 
@@ -100,15 +112,45 @@ Cross-compiling works because the SQLite driver is a [pure-Go implementation](ht
 - Detailed furniture models: cabinet door gaps and handles, upholstered headboards, metal and ceramic materials with environment reflections, and more
 - Select and drag furniture in 3D as well, kept in sync with the 2D plan in real time
 
-**Style packs**
-- One dropdown in the top bar switches the whole scheme: Modern Minimal / New Chinese / Mediterranean / Nordic
+**Style packs (10)**
+- One dropdown in the top bar switches the whole scheme: Modern Minimal / New Chinese / Mediterranean / Nordic / Japandi / Cream / Modern Luxe / Industrial / French Classic / American Classic
 - A pack = per-room flooring + 3D wall paint, trim and ceiling colour + furniture palette, applied as one undoable step
+- The four-swatch strip next to the dropdown previews the current pack (floor / wall / trim / furniture); hover for material names and hex values
 - "Shell" toggle hides every piece of furniture in 2D and 3D so you can look at the bare structure
 
-**Materials & notes**
+**Materials list (quantities derived from your plan)**
 - "BOM" button opens an editable table: category, item, brand, spec/model, qty, unit, unit price, notes
-- "Fill from plan" derives quantities: flooring per material (incl. 5% waste), interior paint (wall length × ceiling height minus openings), skirting (room perimeters), and furniture / appliances / cabinets counted by name with the rooms they sit in
-- Brand, spec, notes and price are yours to fill and survive regeneration; export to CSV (with BOM, opens directly in Excel)
+- "Fill from plan" derives **~70 rows across 15 categories** from the current plan:
+
+  | Category | Examples | How it is derived |
+  | --- | --- | --- |
+  | Flooring | each floor material grouped by room | net room area × 1.05 waste; notes list the rooms |
+  | Walls | interior paint, wall putty | each room's perimeter × 2.78 m ceiling, minus openings; putty at 1.8 kg/m² |
+  | Ceilings | gypsum board (living/dining), aluminium panels (kitchen/bath) | 55% of living/dining area; kitchen/bath + balcony area |
+  | Tiles & stone | kitchen/bath wall tiles, window sills, thresholds | wet perimeters × 2.4 m with 8% waste; window widths and door count |
+  | Doors & windows | interior doors, entry door, casings, aluminium windows, insect screens | door count, window opening area (height derived from sill height) |
+  | Hardware | lock sets, drawer slides, handles, floor drains | doors, cabinet count, bathrooms/balconies |
+  | Lighting | main lights, downlights, LED strip, switches & sockets | main rooms, one per 6 m² of living/dining, half the perimeter, 4 per room |
+  | Bath | toilet, shower set, vanity, heater, accessories | one set per bathroom |
+  | Cabinets | base/wall units, quartz countertop, sink & tap | kitchen perimeter × 0.5 / 0.3 |
+  | Soft furnishings | curtains (2× fullness), curtain track | total window width × 2 / × 1.15 |
+  | Consumables | mortar, waterproofing, grout sealer, cable, PPR pipe, sealant | tiled area × 30 mm, wet areas + 30 cm upstand, 6 m cable per m², … |
+  | Furniture / appliances / cabinets | counted by name with the rooms they sit in | items placed on the plan, with reference prices (toilets and countertops are not double-counted with the bath/cabinet rows) |
+
+- Brand, spec, notes and price are yours to fill and **survive regeneration**; unit prices are references — replace them with your quotes
+- Export to CSV (with BOM, opens directly in Excel)
+
+**Budget**
+- Total = Σ (qty × price); set a **budget cap** and the top progress bar shows the remaining amount or the overspend in red
+- A **reserve percentage** (10% by default) is added to the total so "looks fine, bills over" is less likely
+- "Subtotals by category" sorts categories by amount so you can see where the money goes (flooring / doors & windows / walls / cabinets…)
+- The side panel also shows a budget card: materials total / with reserve / cap / remaining
+
+**Decoration notes**
+- Every row has a free-form note (brand, workmanship, acceptance criteria)
+- Two project-level notes at the bottom of the list: **requirements & style brief** and **site / workmanship notes**
+- A note per room (open a room in the side panel), e.g. "headboard wall panelling", "leave space for a dishwasher"
+- "File → Export brief (Markdown)" packs the style, areas, requirements, site notes, room notes, budget table and the full materials list into one `.md` you can send straight to a designer or contractor
 
 **Plans & statistics**
 - Automatic calculation of room areas and net usable floor area
