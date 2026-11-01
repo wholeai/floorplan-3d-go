@@ -11,6 +11,7 @@ desktop.ini
 
 # Go 后端产物与数据库
 floorplan3d
+/dist/
 data/
 *.db
 *.db-wal

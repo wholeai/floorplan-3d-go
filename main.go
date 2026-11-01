@@ -13,11 +13,14 @@ import (
 	"embed"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -62,11 +65,21 @@ type item struct {
 	Sort     int     `json:"sort"`
 }
 
+// version 由构建时注入：make 会传 -ldflags "-X main.version=1.0.0"。
+var version = "dev"
+
 func main() {
+	showVer := flag.Bool("version", false, "打印版本号后退出")
 	addr := flag.String("addr", ":8787", "监听地址")
 	dbPath := flag.String("db", "data/plan.db", "SQLite 文件路径")
 	base := flag.String("base", "", "子路径部署前缀，例如 /floorplan（也可留空，交给反向代理剥前缀）")
+	noOpen := flag.Bool("no-open", false, "不自动打开浏览器（服务器 / 后台运行时用）")
 	flag.Parse()
+	if *showVer {
+		// 只打版本号，方便脚本解析（make / CI / 用户 -version 对照）
+		fmt.Println("floorplan3d " + version)
+		return
+	}
 
 	db, err := openDB(*dbPath)
 	if err != nil {
@@ -97,7 +110,10 @@ func main() {
 	if strings.HasPrefix(url, ":") {
 		url = "localhost" + url
 	}
-	log.Printf("户型装修设计: http://%s%s/   数据库: %s", url, prefix, *dbPath)
+	log.Printf("户型装修设计 %s: http://%s%s/   数据库: %s", version, url, prefix, *dbPath)
+	if !*noOpen {
+		openBrowser("http://" + url + prefix + "/") // 失败无所谓，用户自己点日志里的地址
+	}
 	log.Fatal(srv.ListenAndServe())
 }
 
@@ -141,6 +157,19 @@ func cacheStatic(h http.Handler) http.Handler {
 		w.Header().Set("cache-control", "public, max-age=3600")
 		h.ServeHTTP(w, r)
 	})
+}
+
+// openBrowser 双击启动时省掉"自己去浏览器粘地址"这一步。
+// 无桌面环境（服务器）时命令不存在，直接忽略错误。
+func openBrowser(url string) {
+	cmd := "xdg-open"
+	if runtime.GOOS == "darwin" {
+		cmd = "open"
+	} else if runtime.GOOS == "windows" {
+		cmd = "rundll32"
+		url = "url.dll,FileProtocolHandler," + url
+	}
+	_ = exec.Command(cmd, url).Start()
 }
 
 func openDB(path string) (*sql.DB, error) {
