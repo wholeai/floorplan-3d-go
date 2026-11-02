@@ -59,12 +59,12 @@ Grab the archive for your platform from [Releases](https://github.com/wholeai/fl
 
 | Platform | File |
 | --- | --- |
-| Windows 10/11 x64 | `floorplan3d_1.4.0_windows_amd64.zip` |
-| Windows 10/11 ARM64 | `floorplan3d_1.4.0_windows_arm64.zip` |
-| macOS Apple Silicon (M-series) | `floorplan3d_1.4.0_darwin_arm64.zip` |
-| macOS Intel | `floorplan3d_1.4.0_darwin_amd64.zip` |
-| Linux x86-64 | `floorplan3d_1.4.0_linux_amd64.zip` |
-| Linux ARM64 (Raspberry Pi etc.) | `floorplan3d_1.4.0_linux_arm64.zip` |
+| Windows 10/11 x64 | `floorplan3d_1.5.0_windows_amd64.zip` |
+| Windows 10/11 ARM64 | `floorplan3d_1.5.0_windows_arm64.zip` |
+| macOS Apple Silicon (M-series) | `floorplan3d_1.5.0_darwin_arm64.zip` |
+| macOS Intel | `floorplan3d_1.5.0_darwin_amd64.zip` |
+| Linux x86-64 | `floorplan3d_1.5.0_linux_amd64.zip` |
+| Linux ARM64 (Raspberry Pi etc.) | `floorplan3d_1.5.0_linux_arm64.zip` |
 
 The binary is a static single file (~11 MB; `index.html` and three.js are embedded). No Go, Node or SQLite install required. Plans and the materials list live in `data/plan.db` next to the binary — copy that folder to move everything to another machine.
 
@@ -109,7 +109,7 @@ CI (`.github/workflows/ci.yml`) runs gofmt / vet / go test / six-platform cross-
 
 The front-end quantity, budget and style-pack math has an assertion self-check: open `http://localhost:8787/?selftest=1`, results go to the console and to `window.__selftest` (65 assertions covering flooring area totals, door/window counts, labour rows, budget formulas, cost per m², price tiers, note persistence and the print sheet)
 
-The end-to-end script `node scripts/e2e.mjs --url http://127.0.0.1:8787/` drives real clicks over CDP with 18 checks: generate the list → toggle "already have" and watch the budget → switch price tiers (including "hand-edited price is never overwritten") → overspend warning → print sheets → 3D entry and showroom viewpoints → no JS exceptions..
+The end-to-end script `node scripts/e2e.mjs --url http://127.0.0.1:8787/` drives real clicks over CDP with 24 checks: generate the list → toggle "already have" and watch the budget → switch price tiers (including "hand-edited price is never overwritten") → overspend warning → print sheets → 3D entry and showroom viewpoints → new plan / isolation between plans / deletion → no JS exceptions..
 
 Targets: `linux/{amd64,arm64}`, `darwin/{amd64,arm64}`, `windows/{amd64,arm64}`.
 
@@ -186,6 +186,11 @@ Cross-compiling works because the SQLite driver is a [pure-Go implementation](ht
 - "Print / PDF" in the materials dialog renders a plain-text A4 landscape quote sheet (list + category subtotals + schedule + notes); input contents are never clipped. `?print=1` previews it on screen
 - "File → Plan drawing (PDF)" outputs a drawing sheet: the current plan plus room areas/flooring, changes/doors/windows and a material legend, A4 portrait; `?print=plan` previews it
 
+**Multiple plans side by side**
+- "File ▾ → Plan" dropdown switches / creates / duplicates / renames / deletes plans; the top bar shows the active one
+- Each plan is one row in SQLite and they never interfere: compare "wall removed + oak floor" against "no change + tiles"
+- Deep link `?plan=<id>`; with `file://` it degrades to a single local plan
+
 **Plans & statistics**
 - Automatic calculation of room areas and net usable floor area
 - Change the floor material of each room (wood, tiles, marble, terrazzo, carpet, etc.), with cost estimates based on area plus 5% wastage
@@ -201,6 +206,7 @@ Cross-compiling works because the SQLite driver is a [pure-Go implementation](ht
 | `?view=3d&closeup=bedB` | open the master-bedroom close-up (cut-away walls) |
 | `?print=1` / `?print=plan` | print preview: quote sheet / plan drawing |
 | `?selftest=1` | run the 66 front-end assertions; results go to the console and `#selftestResult` |
+| `?plan=<id>` | open a specific plan |
 | `?demo=1` | generate the materials list from the plan when it is empty (demo / screenshots) |
 | `?bom=1` | open the materials dialog on load |
 | `?still=1` | skip 3D camera animations (headless screenshots) |
@@ -267,7 +273,9 @@ The UI is responsive: on narrow screens dialogs switch to a single column, the b
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| `GET` / `PUT` | `/api/plan` | Whole plan JSON (room flooring, furniture, demolished walls, style) in one `plans` row |
+| `GET` / `PUT` | `/api/plan` | The default plan (same as `/api/plans/default`); kept for older scripts |
+| `GET` / `POST` | `/api/plans` | Plan list; `POST ?from=<id>&id=<new>&name=<name>` duplicates one |
+| `GET` / `PUT` / `DELETE` | `/api/plans/{id}` | Read / save (`?name=` renames) / delete a plan; `default` cannot be deleted |
 | `GET` / `PUT` | `/api/items` | Materials list, saved by replacing the whole `items` table |
 
 The front end debounces saves (500 ms / 400 ms), so dragging furniture does not flood the API.
@@ -275,10 +283,12 @@ The front end debounces saves (500 ms / 400 ms), so dragging furniture does not 
 ### Schema
 
 ```sql
-plans(id TEXT PRIMARY KEY, name TEXT, data TEXT, updated_at TEXT)
+plans(id TEXT PRIMARY KEY, name TEXT, data TEXT, updated_at TEXT)   -- one row per plan
 items(id INTEGER PRIMARY KEY AUTOINCREMENT, category, name, brand, spec,
       unit, qty REAL, price REAL, note, sort)
 ```
+
+Plan ids allow letters, digits, `_` and `-`; `default` is the first plan (what `/api/plan` points at) and cannot be deleted.
 
 `data/` is git-ignored; copy the directory to move your plan to another machine.
 

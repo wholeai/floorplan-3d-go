@@ -185,6 +185,33 @@ try {
     return document.querySelector('#modes3d [data-mode="closeup"]').classList.contains('on') || true; })()`);
   check(closeup === true, '特写模式可切换');
 
+  // 7. 多方案：新建 → 切回默认 → 改默认不影响新方案 → 删除
+  await cdp.eval(`document.querySelector('[data-view="2d"]').click(); true`);
+  await sleep(500);
+  const plans0 = await cdp.eval(`(async () => { await loadPlans(); return planList.length; })()`);
+  check(plans0 >= 1, '方案列表可读', `${plans0} 套`);
+  await cdp.eval(`newPlan(false)`);
+  await sleep(900);
+  const afterNew = await cdp.eval(`({ id: planId, name: planName, opts: document.querySelectorAll('#planSel option').length })`);
+  check(afterNew.id !== 'default' && afterNew.opts >= 2, '新建方案并出现在下拉里', JSON.stringify(afterNew));
+  // 在默认方案里改风格，新方案不应受影响
+  await cdp.eval(`switchPlan('default')`);
+  await sleep(900);
+  await cdp.eval(`(() => { const s = document.querySelector('#styleSel'); s.value = 'industrial'; s.dispatchEvent(new Event('change')); return true; })()`);
+  await sleep(1200);
+  const isolated = await cdp.eval(`(async () => {
+    const a = await (await fetch('api/plans/default')).json();
+    const b = await (await fetch('api/plans/${afterNew.id}')).json();
+    return { a: a.style, b: b.style };
+  })()`);
+  check(isolated.a === 'industrial' && isolated.b !== 'industrial', '方案之间互不串改', JSON.stringify(isolated));
+  const del = await cdp.eval(`(async () => {
+    const r = await fetch('api/plans/${afterNew.id}', { method: 'DELETE' });
+    await loadPlans();
+    return { status: r.status, n: planList.length };
+  })()`);
+  check(del.status === 204 && del.n === 1, '删除方案后列表收回', JSON.stringify(del));
+
   const errors = cdp.logs.filter(l => /EXCEPTION/.test(l));
   check(errors.length === 0, '无 JS 异常', errors.slice(0, 2).join(' | '));
 

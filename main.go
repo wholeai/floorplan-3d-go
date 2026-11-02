@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
@@ -88,7 +89,18 @@ func main() {
 	defer db.Close()
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/plan", func(w http.ResponseWriter, r *http.Request) { planHandler(w, r, db) })
+	// 单方案接口保留（老前端 / 脚本仍可用），指向 default
+	mux.HandleFunc("/api/plan", func(w http.ResponseWriter, r *http.Request) { planHandler(w, r, db, defaultPlanID) })
+	// 多方案：列表 + 按 id 读写删
+	mux.HandleFunc("/api/plans", func(w http.ResponseWriter, r *http.Request) { plansHandler(w, r, db) })
+	mux.HandleFunc("/api/plans/", func(w http.ResponseWriter, r *http.Request) {
+		id := strings.TrimPrefix(r.URL.Path, "/api/plans/")
+		if !validPlanID(id) {
+			http.Error(w, "方案 id 只能包含字母数字下划线短横", http.StatusBadRequest)
+			return
+		}
+		planHandler(w, r, db, id)
+	})
 	mux.HandleFunc("/api/items", func(w http.ResponseWriter, r *http.Request) { itemsHandler(w, r, db) })
 	mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) })
 	// embed FS 以模块根为根，URL 里的 /static/xxx 正好对应内嵌路径 static/xxx，直接服务即可。
@@ -192,11 +204,73 @@ func openDB(path string) (*sql.DB, error) {
 
 /* ---------------- 方案 ---------------- */
 
-func planHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+const defaultPlanID = "default"
+
+var planIDRe = regexp.MustCompile(`^[A-Za-z0-9_-]{1,40}$`)
+
+func validPlanID(id string) bool { return planIDRe.MatchString(id) }
+
+type planMeta struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	UpdatedAt string `json:"updatedAt"`
+}
+
+// plansHandler：GET 列表 / POST 复制（?from=xxx&name=yyy）
+func plansHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	switch r.Method {
+	case http.MethodGet:
+		rows, err := db.Query(`SELECT id,name,updated_at FROM plans ORDER BY updated_at DESC`)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+		list := []planMeta{}
+		for rows.Next() {
+			var m planMeta
+			if err := rows.Scan(&m.ID, &m.Name, &m.UpdatedAt); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			list = append(list, m)
+		}
+		writeJSON(w, list)
+	case http.MethodPost: // 复制一份：?from=<id>&id=<new>&name=<name>
+		from, to := r.URL.Query().Get("from"), r.URL.Query().Get("id")
+		if from == "" {
+			from = defaultPlanID
+		}
+		if !validPlanID(to) {
+			http.Error(w, "新方案 id 不合法", http.StatusBadRequest)
+			return
+		}
+		var data, name string
+		if err := db.QueryRow(`SELECT data,name FROM plans WHERE id=?`, from).Scan(&data, &name); err != nil {
+			http.Error(w, "源方案不存在", http.StatusNotFound)
+			return
+		}
+		if n := r.URL.Query().Get("name"); n != "" {
+			name = n
+		}
+		if _, err := db.Exec(`INSERT INTO plans(id,name,data,updated_at) VALUES(?,?,?,?)
+			ON CONFLICT(id) DO UPDATE SET name=excluded.name, data=excluded.data, updated_at=excluded.updated_at`,
+			to, name, data, time.Now().Format(time.RFC3339)); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, planMeta{ID: to, Name: name, UpdatedAt: time.Now().Format(time.RFC3339)})
+	default:
+		w.Header().Set("allow", "GET, POST")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func planHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, id string) {
 	switch r.Method {
 	case http.MethodGet:
 		var data string
-		err := db.QueryRow(`SELECT data FROM plans WHERE id='default'`).Scan(&data)
+		err := db.QueryRow(`SELECT data FROM plans WHERE id=?`, id).Scan(&data)
 		if err == sql.ErrNoRows {
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -213,16 +287,31 @@ func planHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			http.Error(w, "方案 JSON 无效", http.StatusBadRequest)
 			return
 		}
-		_, err = db.Exec(`INSERT INTO plans(id,name,data,updated_at) VALUES('default','默认方案',?,?)
-			ON CONFLICT(id) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at`,
-			string(body), time.Now().Format(time.RFC3339))
+		name := strings.TrimSpace(r.URL.Query().Get("name"))
+		if name == "" {
+			name = "默认方案"
+		}
+		// 只改 name 时（重命名），前端会把 data 一起带上来，这里按 id 覆盖即可
+		_, err = db.Exec(`INSERT INTO plans(id,name,data,updated_at) VALUES(?,?,?,?)
+			ON CONFLICT(id) DO UPDATE SET name=excluded.name, data=excluded.data, updated_at=excluded.updated_at`,
+			id, name, string(body), time.Now().Format(time.RFC3339))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
+	case http.MethodDelete:
+		if id == defaultPlanID {
+			http.Error(w, "默认方案不能删除", http.StatusBadRequest)
+			return
+		}
+		if _, err := db.Exec(`DELETE FROM plans WHERE id=?`, id); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	default:
-		w.Header().Set("allow", "GET, PUT")
+		w.Header().Set("allow", "GET, PUT, DELETE")
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
 }

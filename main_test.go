@@ -18,7 +18,16 @@ func newTestServer(t *testing.T) http.Handler {
 	}
 	t.Cleanup(func() { db.Close() })
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/plan", func(w http.ResponseWriter, r *http.Request) { planHandler(w, r, db) })
+	mux.HandleFunc("/api/plan", func(w http.ResponseWriter, r *http.Request) { planHandler(w, r, db, defaultPlanID) })
+	mux.HandleFunc("/api/plans", func(w http.ResponseWriter, r *http.Request) { plansHandler(w, r, db) })
+	mux.HandleFunc("/api/plans/", func(w http.ResponseWriter, r *http.Request) {
+		id := strings.TrimPrefix(r.URL.Path, "/api/plans/")
+		if !validPlanID(id) {
+			http.Error(w, "bad id", http.StatusBadRequest)
+			return
+		}
+		planHandler(w, r, db, id)
+	})
 	mux.HandleFunc("/api/items", func(w http.ResponseWriter, r *http.Request) { itemsHandler(w, r, db) })
 	return mount(mux, normalizeBase("/floorplan"))
 }
@@ -78,5 +87,65 @@ func TestSubPathRouting(t *testing.T) {
 	}
 	if w := do(t, h, "GET", "/floorplan/api/plan", ""); w.Code != http.StatusNoContent {
 		t.Fatalf("前缀内应可达，实际 %d", w.Code)
+	}
+}
+
+// 多方案：列表 / 复制 / 按 id 读写 / 重命名 / 删除 / 非法 id
+func TestPlansCRUD(t *testing.T) {
+	h := newTestServer(t)
+
+	if w := do(t, h, "PUT", "/floorplan/api/plan", `{"style":"modern"}`); w.Code != http.StatusNoContent {
+		t.Fatalf("默认方案写入失败: %d", w.Code)
+	}
+	// 列表里只有默认方案
+	var list []planMeta
+	json.Unmarshal(do(t, h, "GET", "/floorplan/api/plans", "").Body.Bytes(), &list)
+	if len(list) != 1 || list[0].ID != defaultPlanID {
+		t.Fatalf("初始列表不对: %+v", list)
+	}
+
+	// 复制成 plan-b
+	if w := do(t, h, "POST", "/floorplan/api/plans?from=default&id=plan-b&name=方案B", ""); w.Code != http.StatusOK {
+		t.Fatalf("复制失败: %d %s", w.Code, w.Body.String())
+	}
+	if w := do(t, h, "GET", "/floorplan/api/plans/plan-b", ""); w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"modern"`) {
+		t.Fatalf("复制出来的方案读不到: %d", w.Code)
+	}
+
+	// 改 B 不影响 A
+	do(t, h, "PUT", "/floorplan/api/plans/plan-b?name=方案B", `{"style":"chinese"}`)
+	if got := do(t, h, "GET", "/floorplan/api/plan", "").Body.String(); !strings.Contains(got, "modern") {
+		t.Fatalf("改 B 污染了默认方案: %s", got)
+	}
+	if got := do(t, h, "GET", "/floorplan/api/plans/plan-b", "").Body.String(); !strings.Contains(got, "chinese") {
+		t.Fatalf("B 没存住: %s", got)
+	}
+
+	// 重命名（PUT 带 name）
+	do(t, h, "PUT", "/floorplan/api/plans/plan-b?name=客厅改造", `{"style":"chinese"}`)
+	json.Unmarshal(do(t, h, "GET", "/floorplan/api/plans", "").Body.Bytes(), &list)
+	found := false
+	for _, m := range list {
+		if m.ID == "plan-b" && m.Name == "客厅改造" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("重命名没生效: %+v", list)
+	}
+
+	// 非法 id 与删除默认方案都要拦住
+	if w := do(t, h, "GET", "/floorplan/api/plans/bad..id", ""); w.Code != http.StatusBadRequest {
+		t.Fatalf("非法 id 应该 400，实际 %d", w.Code)
+	}
+	if w := do(t, h, "DELETE", "/floorplan/api/plans/default", ""); w.Code != http.StatusBadRequest {
+		t.Fatalf("默认方案不该能删，实际 %d", w.Code)
+	}
+	if w := do(t, h, "DELETE", "/floorplan/api/plans/plan-b", ""); w.Code != http.StatusNoContent {
+		t.Fatalf("删除失败: %d", w.Code)
+	}
+	json.Unmarshal(do(t, h, "GET", "/floorplan/api/plans", "").Body.Bytes(), &list)
+	if len(list) != 1 {
+		t.Fatalf("删除后应只剩默认方案: %+v", list)
 	}
 }

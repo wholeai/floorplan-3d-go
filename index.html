@@ -158,8 +158,14 @@ main.animating #hint3d{opacity:0}
 .menu-pop{position:absolute;right:0;top:calc(100% + 6px);display:flex;flex-direction:column;min-width:150px;background:#fff;
   border:1px solid var(--line);border-radius:10px;padding:4px;box-shadow:0 10px 30px rgba(40,30,20,.14);z-index:20;animation:fadeIn .2s ease}
 .menu-pop .btn{text-align:left}
+.menu-pop .plan-row{display:flex;gap:4px;padding:2px}
+.menu-pop .plan-row .btn{flex:1;padding:5px 6px;font-size:12px}
+.menu-pop select{width:100%;border:1px solid var(--line);border-radius:7px;padding:5px 6px;font:inherit;background:#fff}
+.menu-pop hr{border:0;border-top:1px solid var(--line);margin:4px 2px}
 .range span{font-variant-numeric:tabular-nums;color:var(--ink)}
 #styleGrp label{display:flex;align-items:center;gap:6px;padding:0 6px;color:var(--muted)}
+.plan-badge{display:inline-block;margin-left:8px;padding:1px 7px;border-radius:20px;background:var(--accent-soft);
+  color:var(--accent);font-size:11px;font-weight:600;vertical-align:2px;max-width:12em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #styleSel{border:1px solid var(--line);border-radius:6px;background:#fff;padding:5px 6px;cursor:pointer;max-width:9em}
 #styleSw{display:inline-flex;gap:2px;align-items:center;cursor:help}
 #styleSw i{display:block;width:12px;height:18px;border-radius:3px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
@@ -347,7 +353,9 @@ main.drawer-panel #fab{opacity:0;visibility:hidden}
       <button class="btn chip" id="tgLib" data-en="◧ Library">◧ 家具库</button>
       <button class="btn chip" id="tgPanel" data-en="Properties ◨">属性 ◨</button>
     </div>
-    <div class="brand"><b data-en="3BR 2LR 1BA · Interior Design">三室两厅一卫 · 装修设计</b><span id="subtitle">原始户型 1:60 · 尺寸单位 mm</span></div>
+    <div class="brand"><b data-en="3BR 2LR 1BA · Interior Design">三室两厅一卫 · 装修设计</b>
+      <span id="subtitle">原始户型 1:60 · 尺寸单位 mm</span>
+      <span id="planName" class="plan-badge" title="当前方案" data-en-title="Current plan"></span></div>
     <div class="grp seg" id="viewSeg" title="切换 2D / 3D (T)" data-en-title="Switch 2D / 3D (T)">
       <span class="pill"></span>
       <button class="btn" data-view="2d" data-en="2D Plan">2D 平面</button>
@@ -414,6 +422,14 @@ main.drawer-panel #fab{opacity:0;visibility:hidden}
     <button class="btn" id="fullscreen" title="全屏 (Shift+F)" style="border:1px solid var(--line);background:#fff">⛶ 全屏</button>
     <details class="menu"><summary class="btn" data-en="File ▾">文件 ▾</summary>
       <div class="menu-pop">
+        <div class="plan-row"><select id="planSel" title="切换方案" data-en-title="Switch plan"></select></div>
+        <div class="plan-row">
+          <button class="btn" id="planNew" data-en="New">新建</button>
+          <button class="btn" id="planCopy" data-en="Duplicate">复制</button>
+          <button class="btn" id="planRename" data-en="Rename">改名</button>
+          <button class="btn danger" id="planDel" data-en="Delete">删除</button>
+        </div>
+        <hr>
         <button class="btn" id="exportPng" data-en="Export image">导出图片</button>
         <button class="btn" id="exportPlan" data-en="Cabinet drawing (PDF)">导出平面图 (PDF)</button>
         <button class="btn" id="exportBrief" data-en="Export brief (Markdown)">导出装修简报 (Markdown)</button>
@@ -786,9 +802,17 @@ function defaultState(){
     notes:{demand:'', exec:''}};           // 装修需求 / 施工备注
 }
 
+// 多方案：SQLite 里 plans 表按 id 存多套，这里记当前在编哪一套
+const PLAN_ID_KEY = 'huxing-plan-id';
+const PLAN_NAME_KEY = 'huxing-plan-name';
+const QUERY_PLAN = new URLSearchParams(location.search).get('plan');
+let planId = QUERY_PLAN || (() => { try { return localStorage.getItem(PLAN_ID_KEY); } catch(e) { return null; } })() || 'default';
+let planName = (() => { try { return localStorage.getItem(PLAN_NAME_KEY); } catch(e) { return null; } })() || '默认方案';
+let planList = [];
 const STORE = 'huxing-design-v2';   // 户型数据换代，旧方案不兼容
+const storeKey = () => STORE + ':' + planId;
 function load(){
-  try { const s = JSON.parse(localStorage.getItem(STORE)); if (s && Array.isArray(s.furniture)) return fixState(s); } catch(e) {}
+  try { const s = JSON.parse(localStorage.getItem(storeKey())); if (s && Array.isArray(s.furniture)) return fixState(s); } catch(e) {}
   return null;
 }
 function fixState(s){
@@ -824,18 +848,103 @@ const undoStack = [], redoStack = [];
 /* 用 http 打开时走 Go + SQLite（/api），直接用 file:// 打开就退回 localStorage */
 const API = location.protocol.startsWith('http') ? 'api' : null;
 function save(){
-  try { localStorage.setItem(STORE, JSON.stringify(state)); } catch(e) {}
+  try {
+    localStorage.setItem(storeKey(), JSON.stringify(state));
+    localStorage.setItem(PLAN_ID_KEY, planId);
+    localStorage.setItem(PLAN_NAME_KEY, planName);
+  } catch(e) {}
   if (!API) return;
   clearTimeout(save.t);   // 拖拽家具时会高频触发，合并成一次 PUT
-  save.t = setTimeout(() => fetch(API+'/plan', {method:'PUT', headers:{'content-type':'application/json'}, body:JSON.stringify(state)}).catch(()=>{}), 500);
+  save.t = setTimeout(() => fetch(`${API}/plans/${encodeURIComponent(planId)}?name=${encodeURIComponent(planName)}`,
+    {method:'PUT', headers:{'content-type':'application/json'}, body:JSON.stringify(state)}).catch(()=>{}), 500);
 }
+// 多方案：读列表 → 读当前方案（库里没有就把当前默认方案写进去）
 async function loadServerPlan(){
   if (!API) return;
+  await loadPlans();
   try {
-    const r = await fetch(API+'/plan');
-    if (r.status === 200){ const s = await r.json(); if (s && Array.isArray(s.furniture)){ state = fixState(s); ui.sel = null; renderAll(); return; } }
-    save();                       // 库里还没有方案：把当前默认方案写进去
+    const r = await fetch(`${API}/plans/${encodeURIComponent(planId)}`);
+    if (r.status === 200){
+      const s = await r.json();
+      if (s && Array.isArray(s.furniture)){ state = fixState(s); ui.sel = null; undoStack.length = 0; redoStack.length = 0; renderAll(); return; }
+    }
+    save();
   } catch(e) {}
+}
+async function loadPlans(){
+  if (!API) return;
+  try {
+    const r = await fetch(API + '/plans');
+    if (r.ok){
+      planList = await r.json();
+      const me = planList.find(p => p.id === planId);
+      if (me && me.name) planName = me.name;
+      renderPlanMenu();
+    }
+  } catch(e) {}
+}
+// 切换 / 新建 / 复制 / 重命名 / 删除方案
+async function switchPlan(id){
+  if (id === planId) return;
+  if (!API){ toast(tr('切换方案需要跑后端（直接打开 index.html 时只有一套本地存档）', 'Switching plans needs the backend; the file:// mode keeps a single local plan')); return; }
+  await fetch(`${API}/plans/${encodeURIComponent(planId)}?name=${encodeURIComponent(planName)}`,
+    {method:'PUT', headers:{'content-type':'application/json'}, body:JSON.stringify(state)}).catch(()=>{});
+  planId = id;
+  const r = await fetch(`${API}/plans/${encodeURIComponent(id)}`).catch(()=>null);
+  state = r && r.ok ? fixState(await r.json()) : defaultState();
+  planName = (planList.find(p => p.id === id) || {}).name || id;
+  ui.sel = null; undoStack.length = 0; redoStack.length = 0;
+  try { localStorage.setItem(PLAN_ID_KEY, planId); localStorage.setItem(PLAN_NAME_KEY, planName); } catch(e) {}
+  renderAll(); await loadPlans();
+  toast(tr(`已切到方案「${planName}」`, `Switched to plan "${planName}"`));
+}
+async function newPlan(copy){
+  if (!API){ toast(tr('新建方案需要跑后端', 'Creating plans needs the backend')); return; }
+  const id = 'p' + Date.now().toString(36);
+  const name = tr(`方案 ${planList.length}`, `Plan ${planList.length}`);
+  if (copy){
+    const r = await fetch(`${API}/plans?from=${encodeURIComponent(planId)}&id=${id}&name=${encodeURIComponent(name + ' 副本')}`, {method:'POST'});
+    if (!r.ok) return toast(tr('复制失败', 'Copy failed'));
+    planId = id; planName = name + ' 副本';
+    const got = await fetch(`${API}/plans/${id}`);
+    if (got.ok) state = fixState(await got.json());
+  } else {
+    planId = id; planName = name; state = defaultState();
+    await fetch(`${API}/plans/${id}?name=${encodeURIComponent(name)}`, {method:'PUT', headers:{'content-type':'application/json'}, body:JSON.stringify(state)});
+  }
+  ui.sel = null; undoStack.length = 0; redoStack.length = 0;
+  try { localStorage.setItem(PLAN_ID_KEY, planId); localStorage.setItem(PLAN_NAME_KEY, planName); } catch(e) {}
+  renderAll(); await loadPlans();
+  toast(tr(`已新建方案「${planName}」`, `Created plan "${planName}"`));
+}
+async function renamePlan(){
+  const name = prompt(tr('方案名称', 'Plan name'), planName);
+  if (!name || name === planName) return;
+  planName = name.trim();
+  save();
+  await fetch(`${API}/plans/${encodeURIComponent(planId)}?name=${encodeURIComponent(planName)}`,
+    {method:'PUT', headers:{'content-type':'application/json'}, body:JSON.stringify(state)}).catch(()=>{});
+  renderPlanMenu(); await loadPlans();
+  toast(tr(`已改名为「${planName}」`, `Renamed to "${planName}"`));
+}
+async function deletePlan(){
+  if (!API) return;
+  if (planId === 'default') return toast(tr('默认方案不能删，可以改名或新建', 'The default plan cannot be deleted'));
+  if (!confirm(tr(`删除方案「${planName}」？不可恢复。`, `Delete plan "${planName}"? This cannot be undone.`))) return;
+  await fetch(`${API}/plans/${encodeURIComponent(planId)}`, {method:'DELETE'}).catch(()=>{});
+  planId = 'default'; planName = '默认方案';
+  const r = await fetch(`${API}/plans/default`).catch(()=>null);
+  state = r && r.ok ? fixState(await r.json()) : defaultState();
+  ui.sel = null; undoStack.length = 0; redoStack.length = 0;
+  renderAll(); await loadPlans();
+  toast(tr('已删除，回到默认方案', 'Deleted — back to the default plan'));
+}
+function renderPlanMenu(){
+  const sel = $('#planSel'), nameEl = $('#planName');
+  if (nameEl) nameEl.textContent = planName;
+  if (!sel) return;
+  const list = planList.length ? planList : [{id: planId, name: planName}];
+  sel.innerHTML = list.map(p => `<option value="${esc(p.id)}"${p.id === planId ? ' selected' : ''}>${esc(p.name || p.id)}</option>`).join('');
 }
 const snap = () => JSON.stringify(state);
 function commit(before){ undoStack.push(before); if (undoStack.length > 150) undoStack.shift(); redoStack.length = 0; save(); }
@@ -2377,6 +2486,11 @@ function renderPlanSheet(){
         </tbody></table></div>
     </div>`;
 }
+$('#planSel').onchange = e => switchPlan(e.target.value);
+$('#planNew').onclick = () => newPlan(false);
+$('#planCopy').onclick = () => newPlan(true);
+$('#planRename').onclick = renamePlan;
+$('#planDel').onclick = deletePlan;
 $('#exportPlan').onclick = () => { renderPlanSheet(); document.body.classList.add('printing-plan'); setTimeout(() => window.print(), 80); };
 window.addEventListener('afterprint', () => document.body.classList.remove('printing-plan'));
 
@@ -2394,7 +2508,7 @@ $('#itemsCsv').onclick = () => {
 applyStaticLang(); syncFullscreen();
 buildDefs(); buildLib(); renderOpenings(); renderDims();
 $('#tip').textContent = TIPS()['2d'];
-syncStyleSel();
+syncStyleSel(); renderPlanMenu();
 fitView(); renderAll();
 loadItems(); loadServerPlan();   // SQLite（http）/ 浏览器本地（file://）
 

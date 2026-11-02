@@ -58,12 +58,12 @@
 
 | 平台 | 文件 |
 | --- | --- |
-| Windows 10/11 x64 | `floorplan3d_1.4.0_windows_amd64.zip` |
-| Windows 10/11 ARM64 | `floorplan3d_1.4.0_windows_arm64.zip` |
-| macOS Apple Silicon（M 系列） | `floorplan3d_1.4.0_darwin_arm64.zip` |
-| macOS Intel | `floorplan3d_1.4.0_darwin_amd64.zip` |
-| Linux x86-64 | `floorplan3d_1.4.0_linux_amd64.zip` |
-| Linux ARM64（树莓派等） | `floorplan3d_1.4.0_linux_arm64.zip` |
+| Windows 10/11 x64 | `floorplan3d_1.5.0_windows_amd64.zip` |
+| Windows 10/11 ARM64 | `floorplan3d_1.5.0_windows_arm64.zip` |
+| macOS Apple Silicon（M 系列） | `floorplan3d_1.5.0_darwin_arm64.zip` |
+| macOS Intel | `floorplan3d_1.5.0_darwin_amd64.zip` |
+| Linux x86-64 | `floorplan3d_1.5.0_linux_amd64.zip` |
+| Linux ARM64（树莓派等） | `floorplan3d_1.5.0_linux_arm64.zip` |
 
 程序是静态单文件（约 11 MB，`index.html` 与 three.js 全部内嵌），不需要安装 Go、Node 或 SQLite。方案与用料清单存在同目录的 `data/plan.db`，拷走这个目录就完成迁移。
 
@@ -108,7 +108,7 @@ CI（`.github/workflows/ci.yml`）跑：gofmt / vet / go test / 六平台交叉�
 
 前端工程量 / 预算 / 风格套装的计算有一套断言自检，浏览器打开 `http://localhost:8787/?selftest=1` 即可跑，结果打在控制台并写进 `window.__selftest`（66 项断言，含地面用量的面积核对、门窗数量、人工费条目、预算公式、每 m² 造价、价格档位、备注持久化、打印表行数）
 
-端到端脚本 `node scripts/e2e.mjs --url http://127.0.0.1:8787/` 用 CDP 真点按钮，18 项检查：生成清单 → 点「我已有」看预算变化 → 切价格档位（含手改价不被覆盖）→ 预算超支提示 → 清单/平面图打印页 → 3D 进场与样板间机位 → 无 JS 异常。。
+端到端脚本 `node scripts/e2e.mjs --url http://127.0.0.1:8787/` 用 CDP 真点按钮，24 项检查：生成清单 → 点「我已有」看预算变化 → 切价格档位（含手改价不被覆盖）→ 预算超支提示 → 清单/平面图打印页 → 3D 进场与样板间机位 → 多方案新建 / 互不串改 / 删除 → 无 JS 异常。。
 
 六个平台产物：`linux/{amd64,arm64}`、`darwin/{amd64,arm64}`、`windows/{amd64,arm64}`。
 
@@ -185,6 +185,11 @@ CI（`.github/workflows/ci.yml`）跑：gofmt / vet / go test / 六平台交叉�
 - 清单里的「打印 / PDF」会渲染一张纯文本的 A4 横向报价单（清单 + 分类小计 + 工期 + 备注），输入框内容不会被截断；`?print=1` 可先在屏幕上看效果
 - 「文件 → 导出平面图 (PDF)」输出一张图纸页：当前平面图 + 房间面积 / 地面材料 + 拆改与门窗统计 + 材料图例，A4 纵向直接打印或存 PDF；`?print=plan` 可预览
 
+**多方案对比**
+- 「文件 ▾ → 方案」下拉可切换 / 新建 / 复制当前 / 改名 / 删除，顶栏显示当前方案名
+- 每套方案是 SQLite 里的一行，互不影响：一边「砸墙 + 木地板」、一边「不砸墙 + 地砖」随便比
+- 深链 `?plan=<id>` 直接打开某一套；本机用 `file://` 打开时退化为单方案本地存档
+
 **方案与统计**
 - 房间面积与套内使用面积自动统计
 - 为每个房间更换地面材料（木地板、地砖、大理石、水磨石、地毯等），按面积加 5% 损耗估算造价
@@ -200,6 +205,7 @@ CI（`.github/workflows/ci.yml`）跑：gofmt / vet / go test / 六平台交叉�
 | `?view=3d&closeup=bedB` | 直接打开主卧特写（剖切墙局部放大） |
 | `?print=1` / `?print=plan` | 打印预览：报价单 / 平面图 |
 | `?selftest=1` | 跑 65 项前端断言，结果进控制台和 `#selftestResult` |
+| `?plan=<id>` | 直接打开某一套方案 |
 | `?demo=1` | 清单为空时自动按户型生成一份（演示 / 截图） |
 | `?bom=1` | 直接打开用料清单弹窗 |
 | `?still=1` | 跳过 3D 镜头动画（无头截图用） |
@@ -264,7 +270,9 @@ location /floorplan/ {
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
-| `GET` / `PUT` | `/api/plan` | 整个方案（房间地面、家具、拆墙、风格）的 JSON，单行 `plans` 表 |
+| `GET` / `PUT` | `/api/plan` | 默认方案（等价于 `/api/plans/default`），老脚本仍可用 |
+| `GET` / `POST` | `/api/plans` | 方案列表；`POST ?from=<id>&id=<新id>&name=<名字>` 复制一份 |
+| `GET` / `PUT` / `DELETE` | `/api/plans/{id}` | 读 / 存（`?name=` 顺便改名）/ 删除某一套方案；`default` 不能删 |
 | `GET` / `PUT` | `/api/items` | 用料清单，整表替换式保存到 `items` 表 |
 
 前端保存是 500 ms / 400 ms 防抖的 PUT，拖动家具不会刷爆请求。
@@ -272,11 +280,12 @@ location /floorplan/ {
 ### 表结构
 
 ```sql
-plans(id TEXT PRIMARY KEY, name TEXT, data TEXT, updated_at TEXT)
+plans(id TEXT PRIMARY KEY, name TEXT, data TEXT, updated_at TEXT)   -- 一套方案一行，可多套
 items(id INTEGER PRIMARY KEY AUTOINCREMENT, category, name, brand, spec,
       unit, qty REAL, price REAL, note, sort)
 ```
 
+方案 id 只允许字母数字下划线短横；`default` 是第一套（也是 `/api/plan` 指向的那套），不能删除。
 `data/` 已在 `.gitignore` 里，换机器把整个目录拷走即可。
 
 ## 目录结构
