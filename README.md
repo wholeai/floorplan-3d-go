@@ -92,7 +92,18 @@ go run .                    # 需要 Go 1.26+
 
 不想跑后端也行：直接用浏览器打开 `index.html`（或用 `python3 -m http.server 8000`），此时不连 `/api`，退化成浏览器 localStorage——功能一样，只是不落库。
 
-## 构建
+## 构建与发版
+
+**发版只要打一个 tag**，GitHub Actions 会自动在六个平台编译、打包 zip + `SHA256SUMS`，并挂着产物创建 Release：
+
+```bash
+git tag -a v1.5.1 -m "v1.5.1：一句话说明" && git push origin v1.5.1
+```
+
+流水线顺序 `gofmt → vet → go test → 交叉编译 → 前端语法闸 → ?selftest → e2e`，全过才发 Release（测试挂了不出包）。
+手动跑：仓库 Actions 页 → CI → Run workflow。
+
+本机命令（离线时用）：
 
 ```bash
 make            # 当前平台 → dist/floorplan3d
@@ -104,7 +115,7 @@ make e2e        # 端到端：无头 Chrome 真点按钮（Node 22+）
 make clean      # 清掉 dist/
 ```
 
-CI（`.github/workflows/ci.yml`）跑：gofmt / vet / go test / 六平台交叉编译 + 上传产物 / 前端语法闸 / `?selftest=1` 断言 / CDP 端到端点击。
+CI（`.github/workflows/ci.yml`）：`push` 到 main 与 PR 跑测试，`push` 以 `v*` 开头的 tag 额外触发发版 job（`needs: [go, frontend]`）。
 
 前端工程量 / 预算 / 风格套装的计算有一套断言自检，浏览器打开 `http://localhost:8787/?selftest=1` 即可跑，结果打在控制台并写进 `window.__selftest`（66 项断言，含地面用量的面积核对、门窗数量、人工费条目、预算公式、每 m² 造价、价格档位、备注持久化、打印表行数）
 

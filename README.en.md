@@ -93,7 +93,17 @@ go run .                    # requires Go 1.26+
 
 No backend needed either: open `index.html` directly (or `python3 -m http.server 8000`) and the app skips `/api` and keeps everything in browser localStorage — same features, no database.
 
-## Build
+## Build & release
+
+**Shipping a version is just a tag.** GitHub Actions cross-compiles all six platforms, zips them with `SHA256SUMS`, and creates the Release with the artifacts attached:
+
+```bash
+git tag -a v1.5.1 -m "v1.5.1: one line summary" && git push origin v1.5.1
+```
+
+The pipeline runs `gofmt → vet → go test → cross-compile → frontend syntax gate → ?selftest → e2e` and only publishes when all pass. To run it by hand: Actions → CI → Run workflow.
+
+Local commands (offline use):
 
 ```bash
 make            # current platform → dist/floorplan3d
@@ -105,7 +115,7 @@ make e2e        # end-to-end: headless Chrome clicks real buttons (Node 22+)
 make clean      # remove dist/
 ```
 
-CI (`.github/workflows/ci.yml`) runs gofmt / vet / go test / six-platform cross-compile + artifacts / the front-end syntax gate / `?selftest=1` assertions / the CDP end-to-end clicks.
+CI (`.github/workflows/ci.yml`): `push` to main and PRs run the tests; a `v*` tag additionally triggers the release job (`needs: [go, frontend]`), so a failing test can never publish a broken build.
 
 The front-end quantity, budget and style-pack math has an assertion self-check: open `http://localhost:8787/?selftest=1`, results go to the console and to `window.__selftest` (65 assertions covering flooring area totals, door/window counts, labour rows, budget formulas, cost per m², price tiers, note persistence and the print sheet)
 
