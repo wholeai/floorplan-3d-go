@@ -24,6 +24,10 @@ const chrome = spawn(CHROME, [
 ], { stdio: 'ignore' });
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+if (typeof WebSocket === 'undefined') {
+  console.error(`E2E ERROR: 需要 Node 22+（内置 WebSocket），当前 ${process.version}`);
+  process.exit(1);
+}
 
 async function targetUrl() {
   for (let i = 0; i < 80; i++) {
@@ -223,5 +227,8 @@ try {
   process.exitCode = 1;
 } finally {
   chrome.kill('SIGKILL');
-  if (!args.includes('--keep')) rmSync(profile, { recursive: true, force: true });
+  if (!args.includes('--keep')) {
+    try { rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }); }
+    catch (e) { console.warn('清理临时 profile 失败（不影响结果）:', e.code); }
+  }
 }
