@@ -83,11 +83,17 @@ jobs:
           path: |
             dist/*.zip
             dist/SHA256SUMS
+      - name: notes file (optional)
+        id: notes
+        run: |
+          f="docs/releases/${GITHUB_REF_NAME}.md"
+          if [ -f "$f" ]; then echo "body_path=$f" >> "$GITHUB_OUTPUT"; echo "用 $f 作为发布说明"; fi
       - name: publish to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             dist/*.zip
             dist/SHA256SUMS
-          generate_release_notes: true   # 自动生成变更列表（手动发版时才自己写 notes）
+          body_path: ${{ steps.notes.outputs.body_path }}   # 有 docs/releases/<tag>.md 就用它，没有就自动生成
+          generate_release_notes: true
           fail_on_unmatched_files: true
