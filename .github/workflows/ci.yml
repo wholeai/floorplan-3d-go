@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  go:
+    name: Go build & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+      - name: vet
+        run: go vet ./...
+      - name: test
+        run: go test ./...
+      - name: cross-compile all platforms
+        run: make release VERSION=0.0.0-ci
+      - uses: actions/upload-artifact@v4
+        with:
+          name: floorplan3d-ci
+          path: dist/*.zip
+          retention-days: 7
+
+  frontend:
+    name: Frontend syntax & assertions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/check-frontend.mjs
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: headless selftest (?selftest=1)
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+        run: |
+          go build -o /tmp/floorplan3d .
+          /tmp/floorplan3d -addr 127.0.0.1:8788 -db /tmp/ci.db -no-open &
+          sleep 2
+          /usr/bin/google-chrome --headless=new --disable-gpu --no-sandbox --virtual-time-budget=20000 \
+            --dump-dom "http://127.0.0.1:8788/?selftest=1" > /tmp/dom.html
+          grep -o 'SELFTEST [A-Z]*: [0-9]* passed, [0-9]* failed' /tmp/dom.html || true
+          grep -q 'SELFTEST PASS' /tmp/dom.html
+      - name: end-to-end clicks (CDP)
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+        run: node scripts/e2e.mjs --url http://127.0.0.1:8788/
+        # 服务在上一 step 已起在 8788，仍在跑（GHA 每个 step 共享容器）

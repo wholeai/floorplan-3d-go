@@ -141,7 +141,11 @@ main.animating #hint3d{opacity:0}
 .rlabel{font-size:12px;font-weight:600;color:#2b2824;background:rgba(255,253,249,.9);border:1px solid var(--line);
   border-radius:12px;padding:2px 9px;white-space:nowrap;pointer-events:none}
 .rlabel small{font-weight:400;color:var(--muted);margin-left:4px}
-#roomList{padding:0 10px 6px;display:grid;grid-template-columns:1fr 1fr;gap:4px}
+#roomList,#showList{padding:0 10px 6px;display:grid;grid-template-columns:1fr 1fr;gap:4px}
+#showList button{display:flex;align-items:center;gap:5px;width:100%;border:1px solid var(--line);background:#fff;padding:5px 7px;border-radius:7px;cursor:pointer;text-align:left;line-height:1.3;font-size:12px}
+#showList button:hover{background:#f2ece2}
+#showList button b{font-weight:600}
+#showList button i{width:14px;height:14px;border-radius:4px;flex:0 0 auto;background:linear-gradient(135deg,#e6dcc9,#b9a583)}
 #roomList button{display:flex;flex-direction:column;width:100%;border:1px solid var(--line);background:#fff;padding:5px 8px;border-radius:7px;cursor:pointer;text-align:left;line-height:1.3}
 #roomList button:hover{background:#f2ece2}
 #roomList button.on{background:var(--accent-soft);color:var(--accent)}
@@ -182,6 +186,13 @@ main.animating #hint3d{opacity:0}
 .bom-bar .track{position:relative;flex:1 1 180px;min-width:140px;height:8px;border-radius:5px;background:#e8e1d4;overflow:hidden}
 .bom-bar .track i{position:absolute;inset:0 auto 0 0;border-radius:5px;background:#7d9a6f;transition:width .25s}
 .bom-bar .track i.over{background:#c0492f}
+/* 「我已有」+ 价格档位 那一行 */
+.bom-opts{background:#fff;gap:6px}
+.bom-opts .lbl{color:var(--muted)}
+.bom-opts .spacer{flex:1}
+.bom-bar .chip{padding:3px 9px;font-size:11px;border-radius:20px;border:1px solid var(--line);background:#fff;cursor:pointer;color:var(--muted)}
+.bom-bar .chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.bom-bar .chip.off{text-decoration:line-through;opacity:.55}
 /* 分类小计 */
 .bom-fold{border-bottom:1px solid var(--line);padding:0 6px}
 .bom-fold>summary{cursor:pointer;padding:7px 8px;font-size:12px;color:var(--muted);font-weight:600;list-style:none}
@@ -202,7 +213,27 @@ main.animating #hint3d{opacity:0}
 #roomNotes{grid-column:1/-1;font-size:11px;line-height:1.7;border-top:1px dashed var(--line);padding-top:8px}
 /* 打印 / 存 PDF：单独渲染一张纯文本表格（输入框内容不会截断）。
    ?print=1 时给 body 加 .printing，套用同一批规则在屏幕上看效果。 */
-#printSheet{display:none;font:12px/1.5 -apple-system,'PingFang SC','Microsoft YaHei',sans-serif;color:#111}
+#planSheet{display:none;padding:8mm;font:12px/1.5 -apple-system,'PingFang SC','Microsoft YaHei',sans-serif;color:#111}
+#planSheet h1{font-size:17px;margin:0 0 2px}
+#planSheet .meta{color:#555;margin-bottom:8px}
+#planSheet .canvas{position:relative;width:100%;max-width:186mm;margin:0 auto;aspect-ratio:15300/16900;
+  border:1px solid #ccc;border-radius:4px;overflow:hidden;background:#fff}
+#planSheet .canvas svg{position:absolute;inset:0;width:100%;height:100%}
+#planSheet .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+#planSheet table{width:100%;border-collapse:collapse;font-size:11px}
+#planSheet th{text-align:left;border-bottom:1px solid #333;padding:3px}
+#planSheet td{border-bottom:1px solid #e3e3e3;padding:2px 3px}
+#planSheet td.r{text-align:right;font-variant-numeric:tabular-nums}
+#planSheet .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+#planSheet h2{font-size:12px;margin:10px 0 4px}
+@media print{
+  body > *:not(#planSheet){display:none !important}
+  #planSheet{display:block}
+  #planSheet .canvas{border-color:#999;page-break-inside:avoid}
+}
+body.printing-plan > *:not(#planSheet){display:none !important}
+body.printing-plan #planSheet{display:block}
+#printSheet{display:none;padding:8mm;font:12px/1.5 -apple-system,'PingFang SC','Microsoft YaHei',sans-serif;color:#111}
 #printSheet h1{font-size:17px;margin:0 0 2px}
 #printSheet .meta{color:#555;margin-bottom:8px}
 #printSheet .sum{margin:8px 0;padding:6px 8px;border:1px solid #bbb;border-radius:4px}
@@ -213,6 +244,9 @@ main.animating #hint3d{opacity:0}
 #printSheet td.r{text-align:right;font-variant-numeric:tabular-nums}
 #printSheet tfoot td{border-top:1.5px solid #333;font-weight:600}
 #printSheet h2{font-size:12px;margin:12px 0 4px}
+#printSheet table.sched td:first-child{width:34%;font-weight:600}
+#printSheet table.sched td:nth-child(2){width:14%;text-align:right}
+#printSheet table.sched td:nth-child(3){text-align:left;color:#555}
 #printSheet .notes{white-space:pre-wrap;color:#222}
 #printSheet .cats td{border:0;padding:1px 3px}
 @media print{
@@ -334,6 +368,7 @@ main.drawer-panel #fab{opacity:0;visibility:hidden}
     <div class="grp only3d" id="modes3d">
       <button class="btn on" data-mode="orbit" data-en="Orbit">鸟瞰</button>
       <button class="btn" data-mode="walk" data-en="Walk">漫游</button>
+      <button class="btn" data-mode="closeup" title="点房间看局部放大（剖切墙）" data-en-title="Pick a room for a cut-away close-up" data-en="Close-up">特写</button>
     </div>
     <div class="grp only3d">
       <button class="btn" id="vIso" data-en="Iso">斜视</button>
@@ -380,6 +415,7 @@ main.drawer-panel #fab{opacity:0;visibility:hidden}
     <details class="menu"><summary class="btn" data-en="File ▾">文件 ▾</summary>
       <div class="menu-pop">
         <button class="btn" id="exportPng" data-en="Export image">导出图片</button>
+        <button class="btn" id="exportPlan" data-en="Cabinet drawing (PDF)">导出平面图 (PDF)</button>
         <button class="btn" id="exportBrief" data-en="Export brief (Markdown)">导出装修简报 (Markdown)</button>
         <button class="btn" id="exportJson" data-en="Export plan JSON">导出方案 JSON</button>
         <button class="btn" id="importJson" data-en="Import plan">导入方案</button>
@@ -392,6 +428,8 @@ main.drawer-panel #fab{opacity:0;visibility:hidden}
     <div id="lib3d" class="only3d">
       <h4 data-en="Rooms · click to fly there">房间 · 点击飞到该房间</h4>
       <div id="roomList"></div>
+      <h4 title="站进房间、平视看这个风格（全高墙）" data-en-title="Stand inside the room at eye level (full walls)" data-en="Showroom · eye-level">样板间 · 平视看风格</h4>
+      <div id="showList"></div>
     </div>
     <div id="lib"></div>
   </aside>
@@ -437,6 +475,7 @@ main.drawer-panel #fab{opacity:0;visibility:hidden}
 <div id="toast"></div>
 
 <div id="printSheet"></div>
+<div id="planSheet"></div>
 <div id="itemsDlg" class="dlg">
   <div class="dlg-card">
     <div class="dlg-head">
@@ -450,6 +489,13 @@ main.drawer-panel #fab{opacity:0;visibility:hidden}
       <button class="btn primary" id="itemsClose" data-en="Close">关闭</button>
     </div>
     <div class="bom-bar" id="itemsBudget"></div>
+    <div class="bom-bar bom-opts">
+      <span class="lbl" data-en="Already have:">我已有：</span>
+      <span id="bomOff"></span>
+      <span class="spacer"></span>
+      <span class="lbl" data-en="Price level:">价格档位：</span>
+      <span id="bomTier"></span>
+    </div>
     <div class="dlg-body">
       <details class="bom-fold" id="itemsCatsWrap"><summary data-en="Subtotals by category">分类小计 / 预算占比</summary><div id="itemsCats"></div></details>
       <datalist id="brands">
@@ -736,6 +782,7 @@ function defaultState(){
   const rooms = {}; ROOMS.forEach(r => rooms[r.id] = {name:r.name, mat:r.mat, note:''});
   return {furniture:defaultFurniture(), rooms, demolished:[], measures:[], style:'modern',
     budget:{cap:0, reserve:10},            // 预算上限（元）与预留比例（%）
+    bom:{off:[], tier:'std', saved:{}},    // 清单：「我已有」排除项 + 价格档位 + 被移除行的自定义字段
     notes:{demand:'', exec:''}};           // 装修需求 / 施工备注
 }
 
@@ -751,6 +798,9 @@ function fixState(s){
   s.demolished = s.demolished || []; s.measures = s.measures || [];
   s.style = STYLES[s.style] ? s.style : 'modern';
   s.budget = Object.assign({cap:0, reserve:10}, s.budget || {});
+  s.bom = Object.assign({off:[], tier:'std', saved:{}}, s.bom || {});
+  s.bom.saved = (s.bom.saved && typeof s.bom.saved === 'object') ? s.bom.saved : {};
+  s.bom.off = Array.isArray(s.bom.off) ? s.bom.off.filter(k => typeof k === 'string') : [];
   s.notes = Object.assign({demand:'', exec:''}, s.notes || {});
   return s;
 }
@@ -1165,7 +1215,11 @@ function overviewPanel(){
 }
 function bindOverview(){
   $('#openItems2').onclick = openItems;
-  document.querySelectorAll('#panel tr[data-room]').forEach(tr => tr.onclick = () => { select({kind:'room', id:tr.dataset.room}); if (is3D()) window.View3D.flyToRoom(tr.dataset.room); });
+  document.querySelectorAll('#panel tr[data-room]').forEach(tr => tr.onclick = () => {
+    window.__selRoom = tr.dataset.room;
+    select({kind:'room', id:tr.dataset.room});
+    if (is3D()) (window.View3D.closeupMode?.() ? window.View3D.flyToCloseup(tr.dataset.room) : window.View3D.flyToRoom(tr.dataset.room));
+  });
   $('#clearMeasure').onclick = () => state.measures.length && mutate(() => state.measures = []);
   $('#clearFurn').onclick = clearLayout;
 }
@@ -1707,7 +1761,7 @@ drawer(null);                                  // 恢复上次的面板收起状
 $('#exportPng').onclick = exportPNG;
 // 装修简报：把风格、预算、备注和清单整理成一份能直接发给设计师 / 工长的 Markdown
 $('#exportBrief').onclick = () => {
-  const t = budgetTotals(), st = STYLES[state.style] || STYLES.modern;
+  const t = budgetTotals(), st = STYLES[state.style] || STYLES.modern, sch = scheduleEstimate();
   const by = new Map(), totalOf = items.reduce((a, it) => a + (+it.qty || 0) * (+it.price || 0), 0) || 1;
   items.forEach(it => { const c = it.category || '其他', v = (+it.qty || 0) * (+it.price || 0);
     const g = by.get(c) || {n:0, amt:0}; g.n++; g.amt += v; by.set(c, g); });
@@ -1727,6 +1781,10 @@ $('#exportBrief').onclick = () => {
     ...(ROOMS.filter(r => (state.rooms[r.id].note || '').trim())
         .map(r => `- **${nm(state.rooms[r.id].name)}**：${state.rooms[r.id].note.trim()}`)),
     ...(ROOMS.some(r => (state.rooms[r.id].note || '').trim()) ? [] : [tr('（未填写）','(empty)')]), '',
+    `## ${tr('工期估算','Schedule estimate')}`, '',
+    `| ${tr('工种','Phase')} | ${tr('天数','Days')} | ${tr('依据','Basis')} |`, '| --- | --- | --- |',
+    ...sch.rows.map(r => `| ${r[0]} | ${r[1]} | ${r[2]} |`),
+    `| **${tr('合计','Total')}** | **${sch.days}** | ${tr(`约 ${sch.weeks} 周（单工种顺序、含养护）`, `≈ ${sch.weeks} weeks (sequential, incl. curing)`)} |`, '',
     `## ${tr('预算','Budget')}`, '',
     `| ${tr('分类','Category')} | ${tr('项数','Rows')} | ${tr('金额','Amount')} | ${tr('占比','Share')} |`,
     '| --- | --- | --- | --- |',
@@ -1735,6 +1793,7 @@ $('#exportBrief').onclick = () => {
     `| **${tr('清单合计','Total')}** | **${items.length}** | **¥${Math.round(t.sum).toLocaleString()}** | 100% |`, '',
     `- ${tr('预留','Reserve')} ${t.reserve}%：¥${Math.round(t.reserveAmt).toLocaleString()}`,
     `- ${tr('含预留的预算','Budget with reserve')}：**¥${Math.round(t.total).toLocaleString()}**`,
+    `- ${tr('每 m² 造价','Cost per m²')}：¥${Math.round(t.perSqm).toLocaleString()}/${tr('m²','m²')}（${tr('人工占','labour')} ${t.labourShare.toFixed(0)}%）`,
     t.cap ? `- ${tr('预算上限','Budget cap')}：¥${Math.round(t.cap).toLocaleString()}（${t.left < 0 ? tr('超支','over by') + ' ¥' + Math.round(-t.left).toLocaleString() : tr('余量','left') + ' ¥' + Math.round(t.left).toLocaleString()}）`
           : `- ${tr('预算上限','Budget cap')}：${tr('未设置','not set')}`, '',
     `## ${tr('用料与备注清单','Materials & notes')}`, '',
@@ -1827,6 +1886,7 @@ const ITEM_STORE = 'huxing-items-v1';
 const AUTO_CATS = ['地面','墙面','顶面','瓷砖石材','门窗','五金','灯具','卫浴','橱柜','踢脚线',
   '家具','家电','柜体','软装','辅料','人工'];
 const ITEM_CATS = [...AUTO_CATS, '油漆','主材','其他'];
+const OFF_ALIAS = {putty:'paint'};        // 腻子跟着「油漆」一起关
 let items = [];
 
 async function loadItems(){
@@ -1850,7 +1910,12 @@ function budgetTotals(){
   const sum = items.reduce((a, it) => a + (+it.qty || 0) * (+it.price || 0), 0);
   const reserve = Math.max(0, Math.min(100, +b.reserve || 0));
   const reserveAmt = sum * reserve / 100, total = sum + reserveAmt, cap = Math.max(0, +b.cap || 0);
-  return {sum, reserve, reserveAmt, total, cap, left: cap ? cap - total : 0};
+  const netArea = ROOMS.filter(r => r.counted !== false).reduce((a, r) => a + area(r.poly), 0);
+  const labour = items.filter(it => it.category === '人工').reduce((a, it) => a + (+it.qty || 0) * (+it.price || 0), 0);
+  return {sum, reserve, reserveAmt, total, cap, left: cap ? cap - total : 0,
+    netArea, perSqm: netArea ? total / netArea : 0,          // 每 m² 造价（含预留）
+    perSqmMat: netArea ? sum / netArea : 0,
+    labour, labourShare: sum ? labour / sum * 100 : 0};
 }
 function itemsSum(){
   const t = budgetTotals();
@@ -1868,7 +1933,8 @@ function renderBudget(){
       <span>${tr('含预留','with reserve')} <b class="money" id="bTotal"></b></span>
       <label>${tr('预算上限','Budget cap')} <input type="number" id="bCap" min="0" step="1000" placeholder="0"></label>
       <span id="bLeft"></span>
-      <span class="track"><i id="barI"></i></span>`;
+      <span class="track"><i id="barI"></i></span>
+      <span id="bPerSqm"></span>`;
   }
   const t = budgetTotals();
   const pct = t.cap ? Math.min(100, t.total / t.cap * 100) : 0;
@@ -1882,9 +1948,34 @@ function renderBudget(){
   left.innerHTML = t.cap
     ? `${t.left < 0 ? tr('超支','Over') : tr('余量','Left')} <b class="money">${money(Math.abs(t.left))}</b>`
     : tr('填一个上限，就能看还差多少','Set a cap to see how much room is left');
+  $('#bPerSqm').innerHTML = `${tr('每 m²','per m²')} <b class="money">${money(t.perSqm)}</b>`
+    + `<span class="muted">（${tr('人工占','labour')} ${t.labourShare.toFixed(0)}%）</span>`;
   const bar = $('#barI');
   bar.className = t.left < 0 ? 'over' : '';
   bar.style.width = (t.cap ? pct : 0) + '%';
+}
+// 「我已有」开关：关掉即从清单和预算里移除（按稳定 key，不按名称）
+const OFF_KEYS = [['floor','地板','Flooring'], ['paint','油漆（含腻子）','Paint & putty'],
+  ['cable','线材','Cables'], ['waterproof','防水','Waterproofing']];
+function renderBomOpts(){
+  const off = new Set((state.bom && state.bom.off) || []);
+  const box = $('#bomOff');
+  if (box) box.innerHTML = OFF_KEYS.map(([k, zh, en]) =>
+    `<button class="btn chip ${off.has(k) ? 'off' : 'on'}" data-off="${k}">${tr(zh, en)}</button>`).join('');
+  const tier = (state.bom && state.bom.tier) || 'std';
+  const tb = $('#bomTier');
+  if (tb) tb.innerHTML = [['eco','经济 ×0.75','Budget ×0.75'], ['std','标准 ×1','Standard ×1'], ['lux','高端 ×1.5','Premium ×1.5']]
+    .map(([k, zh, en]) => `<button class="btn chip ${tier === k ? 'on' : ''}" data-tier="${k}">${tr(zh, en)}</button>`).join('');
+}
+const TIER_MULT = {eco:.75, std:1, lux:1.5};
+// 只缩放「仍是参考价」的行：用户手改过价格的行 ref 已清掉，不会被档位覆盖
+function applyTier(tier){
+  state.bom.tier = tier;
+  state.bom.saved = {...state.bom.saved, ...Object.fromEntries(items.map(it => [it.name,
+    {price: it.price, ref: it.ref, brand: it.brand, spec: it.spec, note: it.note}]))};
+  const m = TIER_MULT[tier] || 1;
+  items.forEach(it => { if (it.ref === 1 && it.base) it.price = Math.round(it.base * m * 10) / 10; });
+  save(); renderItems(); saveItems();
 }
 function renderCats(){
   const box = $('#itemsCats'); if (!box) return;
@@ -1929,12 +2020,13 @@ function renderItems(){
   }).join('') || `<tr><td colspan="9" class="muted" style="padding:20px 6px">${
     tr('还没有条目。点「从方案生成用量」会按你的户型自动带出地面、墙面、顶面、门窗、五金、灯具、卫浴、橱柜、软装、辅料和家具家电，再补上品牌、规格、单价即可；也可以点「+ 添加一行」自己录。',
        'No rows yet. "Fill from plan" derives flooring, walls, ceilings, doors/windows, hardware, lighting, bath, cabinets, soft furnishings, consumables and furniture from your plan; then fill in brand, spec and prices. Or add a row yourself.')}</td></tr>`;
-  itemsSum(); renderBudget(); renderCats(); renderNotes(false);
+  itemsSum(); renderBudget(); renderCats(); renderNotes(false); renderBomOpts();
 }
 $('#itemsTbl').addEventListener('input', e => {
   const el = e.target, k = el.dataset.k; if (!k) return;
   const it = items[+el.dataset.i]; if (!it) return;
   it[k] = (k === 'qty' || k === 'price') ? (parseFloat(el.value) || 0) : el.value;
+  if (k === 'price') delete it.ref;                       // 手改过价格就不再享受档位缩放
   saveItems(); itemsSum(); renderBudget(); renderCats();   // 改用量 / 单价要立刻反映到预算条
 });
 $('#itemsTbl').addEventListener('click', e => {
@@ -1948,6 +2040,19 @@ $('#itemsDlg').addEventListener('input', e => {
   else if (id === 'bReserve'){ state.budget.reserve = Math.max(0, Math.min(100, +v || 0)); save(); renderBudget(); renderCats(); }
   else if (id === 'noteDemand'){ notesOf().demand = v; save(); }
   else if (id === 'noteExec'){ notesOf().exec = v; save(); }
+});
+$('#itemsDlg').addEventListener('click', e => {
+  const offBtn = e.target.closest('[data-off]');
+  if (offBtn){
+    const k = offBtn.dataset.off, off = new Set((state.bom.off || []));
+    // 先把当前每行的品牌 / 规格 / 备注 / 手改价存起来，切开关不会丢（合并，别把之前存过的冲掉）
+    state.bom.saved = {...state.bom.saved, ...Object.fromEntries(items.map(it => [it.name,
+      {price: it.price, ref: it.ref, brand: it.brand, spec: it.spec, note: it.note}]))};
+    off.has(k) ? off.delete(k) : off.add(k);
+    state.bom.off = [...off]; save(); genItems(true); renderBudget(); return;
+  }
+  const tierBtn = e.target.closest('[data-tier]');
+  if (tierBtn) applyTier(tierBtn.dataset.tier);
 });
 function openItems(){ $('#itemsDlg').classList.add('show'); renderItems(); renderNotes(true); }
 $('#btnItems').onclick = openItems;
@@ -2017,12 +2122,18 @@ function roomStats(){
 // 纯函数（只读 state，不写 items），便于自检
 function buildItems(){
   const old = new Map(items.map(it => [it.name, it]));    // 按名称合并，保住已填的品牌 / 规格 / 备注 / 单价
+  const off = new Set((state.bom && state.bom.off) || []); // 「我已有」的排除项（按稳定 key，不按名称）
   const out = [];
-  const add = (category, name, qty, unit, price, note) => {
+  // key 是给「我已有」开关用的稳定标识；ref=1 表示单价仍是参考价，价格档位只会动这些行
+  const add = (key, category, name, qty, unit, price, note) => {
     qty = qtyRound(qty, unit);
-    if (!(qty > 0)) return;                               // 没有卫生间就别生成马桶
-    const p = old.get(name);
-    out.push({category, name, qty, unit, price: p?.price || price || 0,
+    const offKey = off.has(key) || off.has(OFF_ALIAS[key] || '\u0000');
+    if (!(qty > 0) || offKey) return;                     // 没有卫生间就别生成马桶；排除项直接跳过
+    const keep = (state.bom && state.bom.saved && state.bom.saved[name]) || null;   // 之前被开关移除时存下的编辑
+    const p = old.get(name) || keep, base = price || 0;
+    const priceNow = p && p.price ? p.price : base;
+    const ref = p && p.price ? (p.ref === undefined ? (p.price === base ? 1 : 0) : p.ref) : (base ? 1 : 0);
+    out.push({category, name, qty, unit, key, base, price: priceNow, ref,
       brand: p?.brand || '', spec: p?.spec || '', note: p?.note || note});
   };
   const R = roomStats();
@@ -2038,8 +2149,8 @@ function buildItems(){
   ROOMS.forEach(r => { const m = state.rooms[r.id].mat;
     byMat[m] = (byMat[m] || 0) + area(r.poly) * 1.05;
     (roomsOf[m] = roomsOf[m] || []).push(nm(state.rooms[r.id].name)); });
-  Object.entries(byMat).forEach(([m, a]) => add('地面', nm(MATS[m].name) + tr(' 地面',' floor'), a, 'm²', MATS[m].price, roomsOf[m].join('、')));
-  add('踢脚线', tr('踢脚线','Skirting board'), ROOMS.reduce((a, r) => a + perim(r.poly), 0), 'm', 25,
+  Object.entries(byMat).forEach(([m, a]) => add('floor', '地面', nm(MATS[m].name) + tr(' 地面',' floor'), a, 'm²', MATS[m].price, roomsOf[m].join('、')));
+  add('skirting', '踢脚线', tr('踢脚线','Skirting board'), ROOMS.reduce((a, r) => a + perim(r.poly), 0), 'm', 25,
     tr('按各房间周长估算，扣掉门洞会更准','Estimated from room perimeters; deduct door openings for accuracy'));
 
   /* --- 墙面 / 顶面：乳胶漆、腻子、吊顶 --- */
@@ -2048,87 +2159,87 @@ function buildItems(){
   const paintWall = Math.max(0, R.totWall - doorArea - winArea);
   const paintCeil = Math.max(0, R.totArea - ceilTiles - ceilBoard);
   const paint = paintWall + paintCeil;
-  add('墙面', tr('内墙乳胶漆（墙面 + 顶面）','Interior paint (walls + ceiling)'), paint, 'm²', 35,
+  add('paint', '墙面', tr('内墙乳胶漆（墙面 + 顶面）','Interior paint (walls + ceiling)'), paint, 'm²', 35,
     tr(`按 2.78m 层高估算、已扣门窗，约 ${Math.round(paint / 10)}L（两遍）`,
        `At 2.78 m ceiling height with openings deducted, about ${Math.round(paint / 10)} L (two coats)`));
-  add('墙面', tr('墙面腻子（两遍）','Wall putty (two coats)'), paintWall * 1.8, 'kg', 2.5,
+  add('putty', '墙面', tr('墙面腻子（两遍）','Wall putty (two coats)'), paintWall * 1.8, 'kg', 2.5,
     tr('按 1.8 kg/m² 估算','Estimated at 1.8 kg/m²'));
-  add('顶面', tr('客餐厅石膏板吊顶','Gypsum ceiling (living / dining)'), ceilBoard, 'm²', 145,
+  add('ceilBoard', '顶面', tr('客餐厅石膏板吊顶','Gypsum ceiling (living / dining)'), ceilBoard, 'm²', 145,
     tr('按客餐厅 55% 面积做局部吊顶','Local dropped ceiling over ~55% of living/dining'));
-  add('顶面', tr('厨卫集成吊顶（铝扣板）','Kitchen/bath ceiling panels'), ceilTiles, 'm²', 180,
+  add('ceilPanel', '顶面', tr('厨卫集成吊顶（铝扣板）','Kitchen/bath ceiling panels'), ceilTiles, 'm²', 180,
     tr('厨卫 + 阳台地面面积','Floor area of kitchen, bath and balconies'));
 
   /* --- 瓷砖 / 石材 --- */
   const wetWall = R.wet.reduce((a, r) => a + r.p * 2.4, 0) - doorArea * .3;   // 墙砖贴到 2.4m
-  add('瓷砖石材', tr('厨卫墙砖','Kitchen/bath wall tiles'), Math.max(0, wetWall * 1.08), 'm²', 120,
+  add('wallTile', '瓷砖石材', tr('厨卫墙砖','Kitchen/bath wall tiles'), Math.max(0, wetWall * 1.08), 'm²', 120,
     tr('按周长 × 2.4m 估算，含 8% 损耗','Perimeter × 2.4 m, incl. 8% waste'));
-  add('瓷砖石材', tr('窗台石（人造石）','Window sills (engineered stone)'), winLenSum * 1.05, 'm', 220,
+  add('sill', '瓷砖石材', tr('窗台石（人造石）','Window sills (engineered stone)'), winLenSum * 1.05, 'm', 220,
     tr(`按 ${WINS.length} 樘窗宽度估算，含两侧加深`,'Per window width, both reveals included'));
-  add('瓷砖石材', tr('过门石 / 门槛石','Threshold stone'), DOORS.length, '块', 120, tr('每个门洞一块','One per door opening'));
+  add('threshold', '瓷砖石材', tr('过门石 / 门槛石','Threshold stone'), DOORS.length, '块', 120, tr('每个门洞一块','One per door opening'));
 
   /* --- 门窗 --- */
   const innerDoors = DOORS.filter(d => !d.entry), entryDoors = DOORS.filter(d => d.entry);
-  add('门窗', tr('室内木门（含门套）','Interior doors (with frames)'), innerDoors.length, '樘', 1800,
+  add('door', '门窗', tr('室内木门（含门套）','Interior doors (with frames)'), innerDoors.length, '樘', 1800,
     tr(innerDoors.map(d => d.name).join('、'), innerDoors.map(d => d.name).join(', ')));
-  add('门窗', tr('入户门（防盗门）','Entry door (security)'), entryDoors.length, '樘', 3800,
+  add('entryDoor', '门窗', tr('入户门（防盗门）','Entry door (security)'), entryDoors.length, '樘', 3800,
     tr('原图入户位置','At the entry shown on the plan'));
-  add('门窗', tr('门套线（补充）','Door casing'), DOORS.reduce((a, d) => a + d.len / 1000 + 4.2, 0), 'm', 120,
+  add('casing', '门窗', tr('门套线（补充）','Door casing'), DOORS.reduce((a, d) => a + d.len / 1000 + 4.2, 0), 'm', 120,
     tr('按每樘门洞高 2.1m 两侧 + 上沿','2.1 m sides plus head per opening'));
-  add('门窗', tr('断桥铝窗','Thermal-break aluminium windows'), winArea, 'm²', 780,
+  add('window', '门窗', tr('断桥铝窗','Thermal-break aluminium windows'), winArea, 'm²', 780,
     tr(`按 ${WINS.length} 处窗洞面积估算`,'Estimated from window opening areas'));
-  add('门窗', tr('纱窗','Insect screens'), WINS.length, '扇', 120, tr('每处窗洞一扇','One per window opening'));
+  add('screen', '门窗', tr('纱窗','Insect screens'), WINS.length, '扇', 120, tr('每处窗洞一扇','One per window opening'));
 
   /* --- 五金 --- */
   const cabCount = state.furniture.filter(f => CAB_TYPES.includes(f.type)).length;
-  add('五金', tr('门锁五金套件','Door lock & hardware set'), DOORS.length, '套', 180, tr('每樘门一套','One per door'));
-  add('五金', tr('抽屉滑轨','Drawer slides'), cabCount * 2, '副', 60, tr('按柜体每件 2 副估算','2 pairs per cabinet'));
-  add('五金', tr('柜门拉手','Cabinet handles'), cabCount * 4, '个', 25, tr('按柜体每件 4 个估算','4 per cabinet'));
-  add('五金', tr('地漏','Floor drains'), R.of('bath').length * 2 + R.of('balcony').length, '个', 90,
+  add('lock', '五金', tr('门锁五金套件','Door lock & hardware set'), DOORS.length, '套', 180, tr('每樘门一套','One per door'));
+  add('slide', '五金', tr('抽屉滑轨','Drawer slides'), cabCount * 2, '副', 60, tr('按柜体每件 2 副估算','2 pairs per cabinet'));
+  add('handle', '五金', tr('柜门拉手','Cabinet handles'), cabCount * 4, '个', 25, tr('按柜体每件 4 个估算','4 per cabinet'));
+  add('drain', '五金', tr('地漏','Floor drains'), R.of('bath').length * 2 + R.of('balcony').length, '个', 90,
     tr('卫生间各 2 个 + 阳台各 1 个','2 per bathroom plus 1 per balcony'));
 
   /* --- 灯具 / 开关插座 --- */
-  add('灯具', tr('主灯（吸顶 / 吊灯）','Main lights'), R.list.filter(r => r.kind !== 'balcony').length, '盏', 600,
+  add('mainLight', '灯具', tr('主灯（吸顶 / 吊灯）','Main lights'), R.list.filter(r => r.kind !== 'balcony').length, '盏', 600,
     tr('每个主要房间一盏','One per main room'));
-  add('灯具', tr('筒灯 / 射灯','Downlights'), Math.round(liveA / 6), '个', 45, tr('按客餐厅每 6 m² 一个','One per 6 m² of living/dining'));
-  add('灯具', tr('灯带','LED strip'), R.perim('living') * .5, 'm', 35, tr('按客餐厅周长一半估算','Half the living/dining perimeter'));
-  add('灯具', tr('开关插座','Switches & sockets'), R.list.length * 4, '个', 35, tr('每间 4 个估算，按实际点位调整','4 per room; adjust to actual points'));
+  add('downlight', '灯具', tr('筒灯 / 射灯','Downlights'), Math.round(liveA / 6), '个', 45, tr('按客餐厅每 6 m² 一个','One per 6 m² of living/dining'));
+  add('strip', '灯具', tr('灯带','LED strip'), R.perim('living') * .5, 'm', 35, tr('按客餐厅周长一半估算','Half the living/dining perimeter'));
+  add('socket', '灯具', tr('开关插座','Switches & sockets'), R.list.length * 4, '个', 35, tr('每间 4 个估算，按实际点位调整','4 per room; adjust to actual points'));
 
   /* --- 卫浴 --- */
   const baths = R.of('bath').length;
-  add('卫浴', tr('马桶','Toilet'), baths, '套', 1500, tr('每个卫生间一套','One per bathroom'));
-  add('卫浴', tr('淋浴花洒套装','Shower set'), baths, '套', 1200, '');
-  add('卫浴', tr('浴室柜（含台盆龙头）','Vanity with basin & tap'), baths, '套', 2200, '');
-  add('卫浴', tr('浴霸 / 换气扇','Bath heater / extractor'), baths, '台', 800, '');
-  add('卫浴', tr('卫浴五金挂件','Bathroom accessories'), baths, '套', 400, tr('毛巾杆、置物架等','Towel bars, shelves, etc.'));
+  add('toilet', '卫浴', tr('马桶','Toilet'), baths, '套', 1500, tr('每个卫生间一套','One per bathroom'));
+  add('shower', '卫浴', tr('淋浴花洒套装','Shower set'), baths, '套', 1200, '');
+  add('vanity', '卫浴', tr('浴室柜（含台盆龙头）','Vanity with basin & tap'), baths, '套', 2200, '');
+  add('heater', '卫浴', tr('浴霸 / 换气扇','Bath heater / extractor'), baths, '台', 800, '');
+  add('bathacc', '卫浴', tr('卫浴五金挂件','Bathroom accessories'), baths, '套', 400, tr('毛巾杆、置物架等','Towel bars, shelves, etc.'));
 
   /* --- 橱柜 --- */
   const kP = R.perim('kitchen');
-  add('橱柜', tr('橱柜地柜','Base cabinets'), kP * .5, 'm', 1200, tr('按厨房周长一半估算','Half the kitchen perimeter'));
-  add('橱柜', tr('橱柜吊柜','Wall cabinets'), kP * .3, 'm', 900, '');
-  add('橱柜', tr('石英石台面','Quartz countertop'), kP * .5, 'm', 700, '');
-  add('橱柜', tr('水槽 + 龙头','Sink & tap'), R.of('kitchen').length, '套', 1200, '');
+  add('baseCab', '橱柜', tr('橱柜地柜','Base cabinets'), kP * .5, 'm', 1200, tr('按厨房周长一半估算','Half the kitchen perimeter'));
+  add('wallCab', '橱柜', tr('橱柜吊柜','Wall cabinets'), kP * .3, 'm', 900, '');
+  add('countertop', '橱柜', tr('石英石台面','Quartz countertop'), kP * .5, 'm', 700, '');
+  add('sink', '橱柜', tr('水槽 + 龙头','Sink & tap'), R.of('kitchen').length, '套', 1200, '');
 
   /* --- 软装 --- */
-  add('软装', tr('窗帘（两倍褶）','Curtains (2× fullness)'), winLenSum * 2, 'm', 180, tr('按窗宽两倍估算','Twice the window width'));
-  add('软装', tr('窗帘杆 / 轨道','Curtain track'), winLenSum * 1.15, 'm', 60, '');
+  add('curtain', '软装', tr('窗帘（两倍褶）','Curtains (2× fullness)'), winLenSum * 2, 'm', 180, tr('按窗宽两倍估算','Twice the window width'));
+  add('track', '软装', tr('窗帘杆 / 轨道','Curtain track'), winLenSum * 1.15, 'm', 60, '');
 
   /* --- 辅料 --- */
-  add('辅料', tr('水泥砂浆（找平）','Cement mortar (screed)'), Math.max(.1, tilesA * .03), 't', 420,
+  add('mortar', '辅料', tr('水泥砂浆（找平）','Cement mortar (screed)'), Math.max(.1, tilesA * .03), 't', 420,
     tr('铺砖面积 × 3cm 估算','Tiled area × 30 mm'));
-  add('辅料', tr('防水涂料','Waterproofing membrane'), wetA + wetP * .3 + balcA * .5, 'm²', 45,
+  add('waterproof', '辅料', tr('防水涂料','Waterproofing membrane'), wetA + wetP * .3 + balcA * .5, 'm²', 45,
     tr('厨卫地面 + 上返 30cm + 阳台一半','Wet floors + 30 cm upstand + half the balconies'));
-  add('辅料', tr('美缝剂','Tile grout sealer'), Math.max(.1, tilesA * .15), 'kg', 60, tr('按瓷砖面积估算','Per tiled area'));
-  add('辅料', tr('电线（2.5/4 平方）','Electrical cable'), R.totArea * 6, 'm', 4.5, tr('按每 m² 6m 估算','6 m per m²'));
-  add('辅料', tr('PPR 水管','PPR water pipe'), wetP * 1.5 + R.of('balcony').length * 8, 'm', 25, '');
-  add('辅料', tr('玻璃胶 / 密封胶','Silicone sealant'), R.list.length * 2, '支', 35, '');
+  add('grout', '辅料', tr('美缝剂','Tile grout sealer'), Math.max(.1, tilesA * .15), 'kg', 60, tr('按瓷砖面积估算','Per tiled area'));
+  add('cable', '辅料', tr('电线（2.5/4 平方）','Electrical cable'), R.totArea * 6, 'm', 4.5, tr('按每 m² 6m 估算','6 m per m²'));
+  add('pipe', '辅料', tr('PPR 水管','PPR water pipe'), wetP * 1.5 + R.of('balcony').length * 8, 'm', 25, '');
+  add('sealant', '辅料', tr('玻璃胶 / 密封胶','Silicone sealant'), R.list.length * 2, '支', 35, '');
 
   /* --- 人工费：按面积 / 数量估参考价，实际以施工队报价为准 --- */
-  add('人工', tr('水电改造人工','Plumbing & electrical labour'), R.totArea, 'm²', 130,
+  add('labElec', '人工', tr('水电改造人工','Plumbing & electrical labour'), R.totArea, 'm²', 130,
     tr('按套内面积估算，参考价','Estimated from net floor area; reference price'));
-  add('人工', tr('瓦工铺贴人工','Tiling labour'), tilesA, 'm²', 90, tr('按铺砖面积估算','Per tiled area'));
-  add('人工', tr('木工吊顶人工','Ceiling labour'), ceilTiles + ceilBoard, 'm²', 80, tr('按吊顶面积估算','Per ceiling area'));
-  add('人工', tr('油漆工人工','Painting labour'), paint, 'm²', 28, tr('按涂刷面积估算','Per painted area'));
-  add('人工', tr('安装人工（门 / 柜 / 洁具 / 灯具）','Installation labour'), R.list.length, '间', 260,
+  add('labTile', '人工', tr('瓦工铺贴人工','Tiling labour'), tilesA, 'm²', 90, tr('按铺砖面积估算','Per tiled area'));
+  add('labWood', '人工', tr('木工吊顶人工','Ceiling labour'), ceilTiles + ceilBoard, 'm²', 80, tr('按吊顶面积估算','Per ceiling area'));
+  add('labPaint', '人工', tr('油漆工人工','Painting labour'), paint, 'm²', 28, tr('按涂刷面积估算','Per painted area'));
+  add('labFit', '人工', tr('安装人工（门 / 柜 / 洁具 / 灯具）','Installation labour'), R.list.length, '间', 260,
     tr('按房间数估算','Per room'), );
 
   /* --- 家具 / 柜体 / 家电：按名称计数 --- */
@@ -2137,17 +2248,25 @@ function buildItems(){
     g.n++; const rm = roomOf(f); if (rm) g.rooms.add(nm(state.rooms[rm.id].name)); grp.set(f.name, g); });
   grp.forEach(g => { const cat = kindOf(g.type), rooms = [...g.rooms].join('、');
     const dup = DUP_WITH[g.type];
-    add(cat, g.name, g.n, tr(cat === '家电' ? '台' : '件', 'pc'), dup ? 0 : (FURN_PRICE[g.type] || 0),
+    add('furn', cat, g.name, g.n, tr(cat === '家电' ? '台' : '件', 'pc'), dup ? 0 : (FURN_PRICE[g.type] || 0),
       dup ? tr(`${rooms}｜费用已计入「${dup}」主材，此处只记位置`, `${rooms} | cost already counted under ${dup}; location only`)
           : rooms); });
 
   const gen = new Set(out.map(o => o.name));   // 自动分类里没被重新生成、但用户填过品牌的条目留着
-  return {rows: out, kept: items.filter(it => !AUTO_CATS.includes(it.category) || (it.brand && !gen.has(it.name)))};
+  // 但「我已有」关掉的分类不能再被 kept 复活（否则填过品牌的行开关点了没反应）
+  const excluded = it => it.key && (off.has(it.key) || off.has(OFF_ALIAS[it.key] || '\u0000'));
+  return {rows: out, kept: items.filter(it => !excluded(it) &&
+    (!AUTO_CATS.includes(it.category) || (it.brand && !gen.has(it.name))))};
 }
-function genItems(){
+function genItems(silent){
   const r = buildItems();
-  items = r.rows.concat(r.kept);
+  // 切「我已有」时必须重算，但保留用户已经填过的品牌 / 规格 / 备注 / 手改价
+  const prev = new Map(items.map(it => [it.name, it]));
+  items = r.rows.map(it => { const old = prev.get(it.name); return old && old.ref !== 1 && old.price
+    ? {...it, price: old.price, ref: 0, brand: old.brand || it.brand, spec: old.spec || it.spec, note: old.note || it.note} : it; })
+    .concat(r.kept);
   renderItems(); saveItems();
+  if (silent) return;
   const t = budgetTotals();
   toast(tr(`已根据方案生成 ${r.rows.length} 条用量（合计 ${money(t.sum)}），品牌 / 规格 / 单价可自行补充`,
     `${r.rows.length} rows generated from the plan (${money(t.sum)}) — add brand, spec and prices as you go`));
@@ -2157,9 +2276,31 @@ $('#itemsGen').onclick = () => {
     'This recalculates every auto row from the current plan (floors, walls, ceilings, doors/windows, hardware, lighting, bath, cabinets, soft furnishings, consumables, furniture). Your brand, spec, notes and prices are kept; hand-written rows under other categories stay untouched. Continue?'))) return;
   genItems();
 };
+// 工期估算：按工种顺序给个参考天数（不做甘特图，够沟通用）
+function scheduleEstimate(){
+  const R = roomStats();
+  const tilesA = ROOMS.reduce((a, r) => { const m = state.rooms[r.id].mat;
+    return a + (['wood', 'walnut', 'carpet'].includes(m) ? 0 : area(r.poly)); }, 0);
+  const ceilTiles = R.area('kitchen') + R.area('bath') + R.area('balcony');
+  const ceilBoard = R.area('living') * .55;
+  const paint = Math.max(0, R.totWall - doorArea - winArea) + Math.max(0, R.totArea - ceilTiles - ceilBoard);
+  const dem = state.demolished.reduce((a, id) => { const w = WALLS[+id.slice(1)];
+    return a + (w ? Math.max(w[2] - w[0], w[3] - w[1]) / 1000 : 0); }, 0);
+  const rows = [
+    [tr('拆改','Demolition'), dem ? Math.max(1, Math.ceil(dem / 6)) : 0, tr(`拆墙 ${dem.toFixed(1)} m`, `${dem.toFixed(1)} m of wall`)],
+    [tr('水电','Plumbing & electrical'), Math.max(1, Math.ceil(R.totArea / 12)), `${R.totArea.toFixed(0)} m²`],
+    [tr('瓦工','Tiling'), Math.max(1, Math.ceil(tilesA / 10)), tr(`铺砖 ${tilesA.toFixed(0)} m²`, `${tilesA.toFixed(0)} m² tiled`)],
+    [tr('木工','Carpentry'), Math.max(1, Math.ceil((ceilTiles + ceilBoard) / 12)), tr(`吊顶 ${(ceilTiles + ceilBoard).toFixed(0)} m²`, `${(ceilTiles + ceilBoard).toFixed(0)} m² ceiling`)],
+    [tr('油漆','Painting'), Math.max(1, Math.ceil(paint / 25)), tr(`涂刷 ${paint.toFixed(0)} m²`, `${paint.toFixed(0)} m² painted`)],
+    [tr('安装','Installation'), Math.max(1, Math.ceil(R.list.length / 2)), tr(`${R.list.length} 个空间`, `${R.list.length} spaces`)],
+  ].filter(r => r[1] > 0);
+  const days = rows.reduce((a, r) => a + r[1], 0);
+  return {rows, days, weeks: +(days / 6).toFixed(1)};
+}
+
 // 打印 / 存 PDF：生成一张纯文本清单（输入框没法打印完整内容，所以单独渲染）
 function renderPrintSheet(){
-  const t = budgetTotals(), st = STYLES[state.style] || STYLES.modern;
+  const t = budgetTotals(), st = STYLES[state.style] || STYLES.modern, sch = scheduleEstimate();
   const by = new Map();
   items.forEach(it => { const c = it.category || '其他', v = (+it.qty || 0) * (+it.price || 0);
     by.set(c, (by.get(c) || 0) + v); });
@@ -2176,7 +2317,7 @@ function renderPrintSheet(){
     <div class="meta">${tr('风格','Style')}：${styleName(state.style)}　·　${tr('套内面积','Net area')}：
       ${fmt(ROOMS.filter(r => r.counted !== false).reduce((a, r) => a + area(r.poly), 0))} m²　·　
       ${tr('条目','Rows')}：${items.length}　·　${new Date().toLocaleString()}</div>
-    <div class="sum">${tr('合计','Total')} <b>${money(t.sum)}</b>　|　${tr('预留','Reserve')} ${t.reserve}%
+    <div class="sum">${tr('合计','Total')} <b>${money(t.sum)}</b>　|　${tr('每 m²','per m²')} <b>${money(t.perSqm)}</b>（${tr('人工占','labour')} ${t.labourShare.toFixed(0)}%）　|　${tr('预留','Reserve')} ${t.reserve}%
       → ${tr('含预留','with reserve')} <b>${money(t.total)}</b>${t.cap
         ? `　|　${tr('预算上限','Cap')} ${money(t.cap)}　|　${t.left < 0 ? tr('超支','Over') : tr('余量','Left')} <b>${money(Math.abs(t.left))}</b>` : ''}</div>
     <table><thead><tr>
@@ -2187,11 +2328,58 @@ function renderPrintSheet(){
     <h2>${tr('分类小计','Subtotals')}</h2>
     <table class="cats"><tbody>${[...by.entries()].sort((a, b) => b[1] - a[1])
       .map(([c, v]) => `<tr><td>${esc(c)}</td><td class="r">${money(v)}</td><td class="r">${(v / (t.sum || 1) * 100).toFixed(1)}%</td></tr>`).join('')}</tbody></table>
+    <h2>${tr('工期估算（单工种顺序，含养护）','Schedule estimate (sequential, incl. curing)')}</h2>
+    <table class="sched"><tbody>${sch.rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]} ${tr('天','d')}</td><td>${r[2]}</td></tr>`).join('')}
+      <tr><td><b>${tr('合计','Total')}</b></td><td><b>${sch.days} ${tr('天','d')}</b></td><td>${tr('约','≈')} ${sch.weeks} ${tr('周','w')}${tr('（单工种顺序、含养护）',' (sequential, incl. curing)')}</td></tr></tbody></table>
     <h2>${tr('装修需求与风格说明','Requirements')}</h2><div class="notes">${esc(notesOf().demand || '—')}</div>
     <h2>${tr('施工与验收备注','Site notes')}</h2><div class="notes">${esc(notesOf().exec || '—')}</div>
     ${roomNotes.length ? `<h2>${tr('房间备注','Room notes')}</h2><div class="notes">${esc(roomNotes.join('\n'))}</div>` : ''}
     <div class="meta" style="margin-top:10px">${tr('单价为参考值，请按实际报价调整。','Unit prices are references; replace them with your quotes.')}</div>`;
 }
+// 平面图 PDF：把当前 2D 平面图克隆进来 + 面积表 + 图例 + 拆墙清单，交给浏览器打印成 A4
+function renderPlanSheet(){
+  const svgClone = $('#plan').cloneNode(true);
+  svgClone.removeAttribute('id');       // 别和页面上那张重复 id，尺寸直接内联给死
+  svgClone.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  svgClone.style.width = '100%'; svgClone.style.height = '100%';
+  svgClone.style.display = 'block';
+  // 固定成「图纸范围」，跟当前缩放 / 平移无关，导出的图每次都一样
+  svgClone.setAttribute('viewBox', `${BOUNDS.x} ${BOUNDS.y} ${BOUNDS.w} ${BOUNDS.h}`);
+  const rows = ROOMS.map(r => {
+    const st = state.rooms[r.id], m = MATS[st.mat];
+    return `<tr><td>${esc(nm(st.name))}</td><td class="r">${fmt(area(r.poly))}</td>
+      <td><span class="legend"><i style="background:${m.sw}"></i></span>${esc(nm(m.name))}</td>
+      <td class="r">${st.note ? esc(st.note) : ''}</td></tr>`;
+  }).join('');
+  const dem = state.demolished.map(id => WALLS[+id.slice(1)]).filter(Boolean);
+  const demLen = dem.reduce((a, w) => a + Math.max(w[2] - w[0], w[3] - w[1]), 0) / 1000;
+  $('#planSheet').innerHTML = `
+    <h1>${tr('户型装修 · 平面图','Floor plan drawing')}</h1>
+    <div class="meta">${tr('风格','Style')}：${styleName(state.style)}　·　
+      ${tr('套内','Net')}：${fmt(ROOMS.filter(r => r.counted !== false).reduce((a, r) => a + area(r.poly), 0))} m²　·　
+      ${tr('比例','Scale')}：${$('#ratio')?.textContent || '1:100'}　·　${new Date().toLocaleDateString()}</div>
+    <div class="canvas">${svgClone.outerHTML}</div>
+    <div class="cols">
+      <div><h2>${tr('房间面积与地面','Rooms & flooring')}</h2>
+        <table><thead><tr><th>${tr('房间','Room')}</th><th>m²</th><th>${tr('地面','Flooring')}</th><th>${tr('备注','Notes')}</th></tr></thead>
+        <tbody>${rows}</tbody></table></div>
+      <div><h2>${tr('拆改与门窗','Changes, doors & windows')}</h2>
+        <table><tbody>
+          <tr><td>${tr('拆除墙体','Walls removed')}</td><td class="r">${demLen ? fmt(demLen, 1) + ' m' : tr('无','none')}</td></tr>
+          <tr><td>${tr('室内门','Interior doors')}</td><td class="r">${DOORS.filter(d => !d.entry).length}</td></tr>
+          <tr><td>${tr('入户门','Entry door')}</td><td class="r">${DOORS.filter(d => d.entry).length}</td></tr>
+          <tr><td>${tr('窗','Windows')}</td><td class="r">${WINS.length}</td></tr>
+          <tr><td>${tr('家具数量','Furniture')}</td><td class="r">${state.furniture.length}</td></tr>
+        </tbody></table>
+        <h2>${tr('图例','Legend')}</h2>
+        <table class="legend"><tbody>${Object.entries(MATS).filter(([k]) => ROOMS.some(r => state.rooms[r.id].mat === k))
+          .map(([k, m]) => `<tr><td><i style="background:${m.sw}"></i>${esc(nm(m.name))}</td><td class="r">¥${m.price}/m²</td></tr>`).join('')}
+        </tbody></table></div>
+    </div>`;
+}
+$('#exportPlan').onclick = () => { renderPlanSheet(); document.body.classList.add('printing-plan'); setTimeout(() => window.print(), 80); };
+window.addEventListener('afterprint', () => document.body.classList.remove('printing-plan'));
+
 $('#itemsPrint').onclick = () => { renderPrintSheet(); document.body.classList.add('printing'); setTimeout(() => window.print(), 80); };
 window.addEventListener('afterprint', () => document.body.classList.remove('printing'));
 $('#itemsCsv').onclick = () => {
@@ -2273,7 +2461,64 @@ function selftest(){
   state.budget = {cap: 0, reserve: 10};
   ok(budgetTotals().left === 0, 'no cap → left = 0 (not overspend)');
 
-  // 7. 备注随方案保存：JSON 往返不丢
+  // 7. 每条自动行都有稳定 key；每 m² 造价与人工占比算得对
+  ok(r.rows.every(x => typeof x.key === 'string' && x.key), 'every auto row has a stable key');
+  const bk = JSON.parse(JSON.stringify(items));
+  items = r.rows.concat(r.kept);
+  state.budget = {cap: 0, reserve: 10};
+  const t1 = budgetTotals();
+  const netA = ROOMS.filter(x => x.counted !== false).reduce((a, x) => a + area(x.poly), 0);
+  ok(near(t1.perSqm, t1.total / netA, 1e-9), `per m² = ${t1.perSqm.toFixed(0)} (total / ${netA.toFixed(1)} m²)`);
+  ok(t1.perSqm > 500 && t1.perSqm < 6000, `per m² within a sane range (${t1.perSqm.toFixed(0)})`);
+  const labSum = items.filter(x => x.category === '人工').reduce((a, x) => a + (+x.qty || 0) * (+x.price || 0), 0);
+  ok(near(t1.labourShare, labSum / (t1.sum || 1) * 100, 1e-9), `labour share = ${t1.labourShare.toFixed(1)}% of list total`);
+
+  // 8. 「我已有」开关：关掉地板 → 清单没有地面行、预算下降；关掉防水 → 没有防水行；复原后一致
+  const sumAll = t1.sum;
+  state.bom = {off: ['floor'], tier: 'std'};
+  const noFloor = buildItems().rows;
+  ok(!noFloor.some(x => x.category === '地面'), 'off=floor removes every flooring row');
+  ok(!noFloor.some(x => x.key === 'floor'), 'off=floor keeps no row with key=floor');
+  items = noFloor; const sumNoFloor = budgetTotals().sum;
+  ok(sumNoFloor < sumAll, `budget drops when flooring is excluded (${sumNoFloor.toFixed(0)} < ${sumAll.toFixed(0)})`);
+  state.bom = {off: ['paint', 'cable', 'waterproof'], tier: 'std'};
+  const noMore = buildItems().rows;
+  ok(!noMore.some(x => ['paint', 'putty', 'cable', 'waterproof'].includes(x.key)), 'off=paint/cable/waterproof removes those rows (putty goes with paint)');
+  state.bom = {off: [], tier: 'std'};
+  items = r.rows.concat(r.kept);
+  ok(near(budgetTotals().sum, sumAll, 1e-9), 'restoring the chips restores the budget');
+
+  // 9. 「我已有」关掉再打开，被移除行的品牌 / 手改价要能找回（state.bom.saved）
+  const floorName = r.rows.find(x => x.key === 'floor').name;
+  // 模拟真实流程：先关掉（地面行从 items 里消失，字段进 saved），再打开
+  state.bom = {off: ['floor'], tier: 'std', saved: {}};
+  const itemsBefore = items;
+  items = buildItems().rows.concat(items.filter(it => it.key !== 'floor'));
+  state.bom.saved = {[floorName]: {price: 888, ref: 0, brand: '测试品牌', spec: 'S-1', note: '保守备注'}};
+  state.bom.off = [];
+  const afterToggle = buildItems().rows.find(x => x.name === floorName);
+  items = itemsBefore;
+  ok(afterToggle && afterToggle.price === 888 && afterToggle.brand === '测试品牌' && afterToggle.ref === 0,
+    'toggling "already have" off/on keeps the typed price and brand');
+  state.bom = {off: [], tier: 'std', saved: {}};
+
+  // 10. 价格档位：只缩放 ref=1 的行；手改价（ref 清掉）不受影响；回标准档复原
+  items = items.map(x => ({...x}));
+  const probe = items.find(x => x.ref === 1 && x.base > 0);
+  applyTier('lux');
+  ok(near(probe.price, Math.round(probe.base * 1.5 * 10) / 10, 1e-9), `premium tier = base × 1.5 (${probe.price})`);
+  applyTier('eco');
+  ok(near(probe.price, Math.round(probe.base * .75 * 10) / 10, 1e-9), `budget tier = base × 0.75 (${probe.price})`);
+  const handRow = items.find(x => x !== probe && x.ref === 1) || {...probe};
+  delete handRow.ref; handRow.price = 12345;
+  applyTier('lux');
+  ok(handRow.price === 12345, 'hand-edited price is never scaled by the tier');
+  applyTier('std');
+  ok(near(probe.price, probe.base, 1e-9), `standard tier restores the base price (${probe.price} = ${probe.base})`);
+  items = bk;
+  state.bom = {off: [], tier: 'std'};
+
+  // 11. 备注随方案保存：JSON 往返不丢
   state.notes = {demand: '自住，简洁好打理', exec: '卫生间二次防水、闭水 48h'};
   state.rooms.bedB.note = '主卧要护墙板';
   const rt = fixState(JSON.parse(JSON.stringify(state)));
@@ -2281,7 +2526,11 @@ function selftest(){
   ok(rt.rooms.bedB.note === '主卧要护墙板', 'room note survives plan JSON round trip');
   state.notes = {demand:'', exec:''}; delete state.rooms.bedB.note;
 
-  // 8. 打印表：条目一条不少，合计出现在表头摘要里
+  // 12. 样板间 / 特写 的入口在（真正的相机行为靠 ?view=3d&show=... 截图验证）
+  ok(!!document.querySelector('#modes3d [data-mode="closeup"]'), 'close-up mode button exists');
+  ok(!!document.querySelector('#showList'), 'showroom preset container exists');
+
+  // 13. 打印表：条目一条不少，合计出现在表头摘要里
   renderPrintSheet();
   const sheetRows = document.querySelectorAll('#printSheet table:first-of-type tbody tr').length;   // 只数清单表，不含分类小计
   ok(sheetRows === items.length, `print sheet rows ${sheetRows} = items ${items.length}`);
@@ -2290,15 +2539,51 @@ function selftest(){
   items = bak;
   return {pass: pass.length, fail: fail.length, failures: fail, passes: pass};
 }
-if (new URLSearchParams(location.search).has('print')){
-  loadItems().then(() => { renderPrintSheet(); document.body.classList.add('printing'); });
+// 深链：?view=3d&show=living（样板间平视）/ &closeup=bedB（房间特写）
+{
+  const q = new URLSearchParams(location.search);
+  if (q.get('view') === '3d' || q.has('show') || q.has('closeup')){
+    const go = async () => {
+      const want = q.has('show') ? q.get('show') : q.has('closeup') ? q.get('closeup') : null;
+      document.querySelector('[data-view="3d"]')?.click();          // 无论如何先进 3D
+      // 等 3D 进场动画真正跑完（用标志位轮询，比写死超时可靠）
+      const t0 = Date.now();
+      while (!window.__3dReady && Date.now() - t0 < 15000) await new Promise(r => setTimeout(r, 120));
+      if (q.has('closeup')) document.querySelector('#modes3d [data-mode="closeup"]')?.click();
+      if (want) (q.has('show') ? window.View3D?.flyToShowcase(want) : window.View3D?.flyToCloseup(want));
+      if (q.has('dbg')) document.title = 'DBG ' + JSON.stringify(window.View3D?.pose?.() || 'no-pose');
+    };
+    setTimeout(go, 900);
+  }
+}
+// ?demo=1 清单为空时自动按户型生成一份；?print=1 / ?print=plan 直接出打印页。
+// 顺序很重要：先等清单读完 →（必要时）生成 → 再渲染打印页。
+if ((() => { const q = new URLSearchParams(location.search); return q.has('demo') || q.has('print') || q.has('bom'); })()){
+  (async () => {
+    const q = new URLSearchParams(location.search);
+    await loadItems();
+    if (q.has('demo') && !items.length){ items = buildItems().rows; renderItems(); saveItems(); }
+    if (q.has('bom')) openItems();                          // ?bom=1 直接打开清单（截图 / 演示）
+    if (!q.has('print')) return;
+    try {
+      if (q.get('print') === 'plan'){ renderPlanSheet(); document.body.classList.add('printing-plan'); }
+      else { renderPrintSheet(); document.body.classList.add('printing'); }
+    } catch (e){ document.title = 'PRINT SHEET ERROR: ' + e.message; console.error(e); }
+  })();
 }
 if (new URLSearchParams(location.search).has('selftest')){
   const res = selftest();
   window.__selftest = res;
-  console.log(`SELFTEST ${res.fail === 0 ? 'PASS' : 'FAIL'}: ${res.pass} passed, ${res.fail} failed`);
+  const verdict = `SELFTEST ${res.fail === 0 ? 'PASS' : 'FAIL'}: ${res.pass} passed, ${res.fail} failed`;
+  console.log(verdict);
   res.passes.forEach(m => console.log('  ✓ ' + m));
   res.failures.forEach(m => console.error('  ✗ ' + m));
+  // 无头浏览器 / CI：把结果写进 DOM，用 --dump-dom 就能取，不必读控制台
+  const out = document.createElement('div');
+  out.id = 'selftestResult';
+  out.style.display = 'none';
+  out.textContent = verdict + (res.failures.length ? ' :: ' + res.failures.join(' | ') : '');
+  document.body.appendChild(out);
 }
 </script>
 <script type="module">
@@ -3167,7 +3452,17 @@ function buildLabels(){
   document.querySelectorAll('#roomList button').forEach(b => b.onclick = () => {
     document.querySelectorAll('#roomList button').forEach(x => x.classList.toggle('on', x === b));
     if (opt.mode === 'walk') setMode('orbit');
-    b.dataset.room === '__all' ? flyTo(isoWhole()) : flyToRoom(b.dataset.room);
+    if (b.dataset.room === '__all'){ showLabels(opt.labels); return flyTo(isoWhole()); }
+    opt.mode === 'closeup' ? flyToCloseup(b.dataset.room) : flyToRoom(b.dataset.room);
+  });
+  // 样板间机位：一点即到（平视全高墙）
+  const shots = [['__entry','入户','Entry'], ['living','客厅','Living'], ['dining','餐厅','Dining'],
+    ['kitchen','厨房','Kitchen'], ['bedB','主卧','Master'], ['bedA','次卧','Bedroom A'], ['bath','卫生间','Bath']];
+  $('#showList').innerHTML = shots.filter(([id]) => id === '__entry' || ROOMS.some(r => r.id === id))
+    .map(([id, zh, en]) => `<button data-shot="${id}"><i></i><b>${tr(zh, en)}</b></button>`).join('');
+  document.querySelectorAll('#showList button').forEach(b => b.onclick = () => {
+    if (opt.mode === 'walk') setMode('orbit');
+    flyToShowcase(b.dataset.shot);
   });
 }
 
@@ -3233,7 +3528,66 @@ function camTween(A, B, e){
 function setPose(P){ camera.position.copy(P.p); orbit.target.copy(P.t); camera.lookAt(P.t); }
 function animate(dur, fn){ return new Promise(res => { anim = {t0:performance.now(), dur, fn, res}; }); }
 const wait = ms => new Promise(r => setTimeout(r, ms));
-function flyTo(B, dur = 900){ fly = {t0:performance.now(), dur, A:curPose(), B}; }
+const STILL = new URLSearchParams(location.search).has('still');   // ?still=1 跳过动画，直接到位
+function flyTo(B, dur = 900){ if (STILL){ setPose(B); return; } fly = {t0:performance.now(), dur, A:curPose(), B}; }
+// 房间外框（世界坐标）与对角线长度
+function roomBox(r){
+  const [x0, y0, x1, y1] = bbox(r.poly);
+  return {cx:(x0 + x1)/2, cy:(y0 + y1)/2, w:(x1 - x0)/1000, d:(y1 - y0)/1000, diag: Math.hypot(x1 - x0, y1 - y0)/1000};
+}
+// A. 房间特写：剖切墙 + 斜俯视，把一个房间框满画面（局部放大，像看样板间的一个房间）
+function flyToCloseup(id){
+  const r = ROOMS.find(x => x.id === id); if (!r) return;
+  const b = roomBox(r);
+  const t = new THREE.Vector3(wx(b.cx), .55, wz(b.cy));
+  const dir = camera.position.clone().sub(orbit.target).setY(0);
+  if (dir.lengthSq() < .01) dir.set(.5, 0, .86);
+  dir.normalize();
+  // 大房间（客餐厅）别一拉就退到全屋：距离按对角线算，但封顶 5.2m
+  const dist = Math.max(2.4, Math.min(b.diag * .95, 5.2));
+  if (opt.cut > 1.25){ opt.cut = 1.2; syncCutBtns(); sync(); }   // 剖切墙，不然自己的墙挡住自己
+  flyTo(pose(t, new THREE.Vector3(t.x + dir.x*dist*.62, dist*.92, t.z + dir.z*dist*.62)));
+}
+// B. 样板间：站进房间里、1.55m 平视（全高墙），像样板间照片
+// 站位按 12×12 网格采样：必须在房间内、不压在墙上 / 家具上，取离房间中心 2~5m 里最远的一点，
+// 也就是「站在角上往房间中间看」——最接近房产照片的构图。
+function standPoint(r){
+  const [x0, y0, x1, y1] = bbox(r.poly);
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  // 家具占位（旋转后取 AABB），站位要留出 0.4m 余量，否则镜头会贴着柜门
+  const furn = state.furniture.filter(f => f.cx > x0 - 900 && f.cx < x1 + 900 && f.cy > y0 - 900 && f.cy < y1 + 900)
+    .map(f => { const b = aabb(f); return [f.cx - b.hw - 400, f.cy - b.hh - 400, f.cx + b.hw + 400, f.cy + b.hh + 400]; });
+  const inFurn = (x, y) => furn.some(b => x > b[0] && x < b[2] && y > b[1] && y < b[3]);
+  let best = null, bestD = -1;
+  for (let i = 1; i <= 15; i++) for (let j = 1; j <= 15; j++){
+    const x = x0 + (x1 - x0) * i / 16, y = y0 + (y1 - y0) * j / 16;
+    if (!insidePoly(r.poly, x, y)) continue;
+    const d = Math.hypot(x - cx, y - cy) / 1000;
+    if (d < 1.9 || d > 5) continue;
+    if (blocked(wx(x), wz(y), .35) || inFurn(x, y)) continue;   // 别站进家具 / 墙里
+    if (d > bestD){ bestD = d; best = [x, y]; }
+  }
+  // 全都占满时退一步：只要不压墙就行
+  if (!best) for (let i = 1; i <= 9; i++) for (let j = 1; j <= 9; j++){
+    const x = x0 + (x1 - x0) * i / 10, y = y0 + (y1 - y0) * j / 10;
+    if (insidePoly(r.poly, x, y) && !blocked(wx(x), wz(y), .3)){ best = [x, y]; break; }
+  }
+  return {pos: best || [cx, cy], cx, cy};
+}
+function flyToShowcase(id){
+  const isEntry = id === '__entry';
+  const r = isEntry ? null : ROOMS.find(x => x.id === id);
+  if (!isEntry && !r) return;
+  const pos = isEntry ? new THREE.Vector3(wx(8250), 1.55, wz(6320))
+                      : (p => new THREE.Vector3(wx(p.pos[0]), 1.55, wz(p.pos[1])))(standPoint(r));
+  const tgt = isEntry ? new THREE.Vector3(wx(5000), 1.25, wz(7700))
+                      : (p => new THREE.Vector3(wx(p.cx), 1.2, wz(p.cy)))(standPoint(r));
+  if (opt.cut < H){ opt.cut = H; syncCutBtns(); sync(); }   // 平视要全高墙，否则一眼看穿
+  orbit.minDistance = .8;
+  orbit.maxPolarAngle = Math.PI * .6;                        // 平视时允许略微抬 / 低头
+  showLabels(false);                                          // 房间名标签挡在画面里，拍照时关掉
+  flyTo(pose(tgt, pos), 1100);
+}
 function flyToRoom(id){
   const r = ROOMS.find(r => r.id === id), xs = r.poly.map(p => p[0]), ys = r.poly.map(p => p[1]);
   const t = new THREE.Vector3(wx((Math.min(...xs)+Math.max(...xs))/2), .6, wz((Math.min(...ys)+Math.max(...ys))/2));
@@ -3250,6 +3604,12 @@ async function enter(){
   sync(true);
   opt.mode = 'orbit'; orbit.enabled = false; showLabels(false);
   const A = planPose(), B = isoFrom(A);
+  if (STILL){                                        // 直接呈现完整 3D，不等动画
+    grow = furnGrow = 1; applyGrow(); setPose(B);
+    orbit.enabled = true; showLabels(opt.labels); stage.classList.add('is3d');
+    startLoop(); renderer.render(scene, camera);      // 没有补间动画就没有帧，得自己起渲染循环
+    window.__3dReady = true; return;
+  }
   grow = 0; furnGrow = 0; applyGrow(); setPose(A);
   stage.classList.add('animating');
   startLoop(); renderer.render(scene, camera);
@@ -3262,9 +3622,12 @@ async function enter(){
     applyGrow();
   });
   orbit.enabled = true; showLabels(opt.labels);
+  orbit.maxPolarAngle = Math.PI*.495;
   stage.classList.remove('animating');
+  window.__3dReady = true;                             // 进场动画结束（深链 / 自检等它）
 }
 async function exit(){
+  window.__3dReady = false;
   if (opt.mode === 'walk'){ walkCtl.unlock(); stopTouchWalk(); $('#hint3d').textContent = HINT_ORBIT; $('#walkOverlay').style.display = 'none'; $('#cross').style.display = 'none';
     const dir = new THREE.Vector3(); camera.getWorldDirection(dir); orbit.target.copy(camera.position).addScaledVector(dir, 3).setY(0); opt.mode = 'orbit'; syncModeBtns(); }
   fly = null; orbit.enabled = false; showLabels(false); stage.classList.add('animating');
@@ -3377,7 +3740,10 @@ function setMode(m){
     walkCtl.unlock(); stopTouchWalk(); orbit.enabled = true;
     $('#walkOverlay').style.display = 'none'; $('#cross').style.display = 'none';
     syncHint3d();
-    orbit.target.set(0, 0, 0); flyTo(isoWhole());
+    orbit.maxPolarAngle = Math.PI*.495;
+    const selRoom = window.__selRoom && ROOMS.some(r => r.id === window.__selRoom) ? window.__selRoom : null;
+    if (m === 'closeup' && selRoom) { flyToCloseup(selRoom); }
+    else { orbit.target.set(0, 0, 0); flyTo(isoWhole()); }
   }
   showLabels(opt.labels && m === 'orbit');
   archUp.traverse(o => { if (o.userData.walkOnly) o.visible = m === 'walk'; });
@@ -3435,8 +3801,8 @@ function bindUI(){
   $('#walkExit').onclick = () => setMode('orbit');
   bindJoystick();
   syncWalkTexts();
-  $('#vIso').onclick = () => { if (opt.mode === 'walk') setMode('orbit'); else flyTo(isoWhole()); };
-  $('#vTop').onclick = () => { if (opt.mode === 'walk') setMode('orbit'); flyTo(topWhole()); };
+  $('#vIso').onclick = () => { if (opt.mode === 'walk') setMode('orbit'); else { showLabels(opt.labels); flyTo(isoWhole()); } };
+  $('#vTop').onclick = () => { if (opt.mode === 'walk') setMode('orbit'); showLabels(opt.labels); flyTo(topWhole()); };
   document.querySelectorAll('[data-cut]').forEach(b => b.onclick = () => { if (opt.mode === 'walk') return; opt.cut = +b.dataset.cut; syncCutBtns(); sync(); });
   document.querySelectorAll('#toggles3d .btn').forEach(b => b.onclick = () => {
     const k = b.dataset.t;
@@ -3468,7 +3834,10 @@ function shot(){ const a = document.createElement('a'); a.download = tr('户型�
 
 function relang(){ syncWalkTexts(); if (inited) buildLabels(); }
 
-window.View3D = {enter, exit, relang, sync:() => sync(), shot, groundAt, flyToRoom:id => active && !anim && flyToRoom(id), walking:() => active && opt.mode === 'walk',
+window.View3D = {enter, exit, relang, sync:() => sync(), shot, groundAt, flyToRoom:id => active && !anim && flyToRoom(id),
+  flyToCloseup:id => active && !anim && flyToCloseup(id), flyToShowcase:id => active && !anim && flyToShowcase(id),
+  pose:() => ({ p: camera.position.toArray().map(v => +v.toFixed(2)), t: orbit.target.toArray().map(v => +v.toFixed(2)), cut: opt.cut, mode: opt.mode }),
+  closeupMode:() => opt.mode === 'closeup', walking:() => active && opt.mode === 'walk',
   setFurn: v => { opt.furn = v; syncFurnChip(); if (inited){ furnG.visible = v; if (!v && ui.sel?.kind === 'furn') window.select(null); } }};
 </script>
 </body>

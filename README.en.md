@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Go](https://img.shields.io/badge/go-1.26-00ADD8?logo=go)](go.mod)
 
-Design the interior of your own floor plan: **lay out furniture, remove walls and take measurements on a 2D plan, then switch to a 3D scene with one click** — bird's-eye or first-person walkthrough. Ten style packs with a one-click preview, a materials list derived from your actual geometry with a budget cap and overspend warning, and a Markdown brief you can hand to a designer or contractor. One small binary, no install, data kept in a local SQLite file.
+Design the interior of your own floor plan: **lay out furniture, remove walls and take measurements on a 2D plan, then switch to a 3D scene** — bird's-eye, first-person walkthrough, or standing inside a room at eye level like a showroom photo. Ten style packs with a one-click preview, a materials list derived from your actual geometry with a budget cap, cost per m², price tiers and overspend warning, plus plan-drawing PDF, quote sheet and Markdown brief exports. One small binary, no install, data kept in a local SQLite file.
 
 > **Built on top of [wy51ai/floorplan-3d](https://github.com/wy51ai/floorplan-3d)** (MIT, 3.3k stars):
 > this fork adds a Go + SQLite backend, vendors three.js locally (no CDN requests), supports sub-path
@@ -35,9 +35,23 @@ Design the interior of your own floor plan: **lay out furniture, remove walls an
 | --- | --- |
 | ![shell](docs/screenshots/05-shell.png) | ![budget](docs/screenshots/09-budget.png) |
 
-**Materials & notes list**: quantities derived from your plan, plus the budget
+**Showroom: stand inside a room at eye level** (one click in the sidebar, full walls, 1.55 m eye height)
+
+| Living room | Master bedroom |
+| --- | --- |
+| ![showroom living](docs/screenshots/10-showroom-living.png) | ![showroom bedroom](docs/screenshots/11-showroom-bedroom.png) |
+
+**Close-up: zoom into one room** (cut-away walls)
+
+![closeup](docs/screenshots/12-closeup-bedroom.png)
+
+**Materials & notes list**: quantities derived from your plan, plus the budget, "already have" chips and price tiers
 
 ![materials list](docs/screenshots/04-materials.png)
+
+**Plan drawing (PDF)**: the plan plus room areas/flooring, changes/doors/windows and a material legend, ready for A4
+
+![plan sheet](docs/screenshots/13-plan-sheet.png)
 
 ## Download and run
 
@@ -45,12 +59,12 @@ Grab the archive for your platform from [Releases](https://github.com/wholeai/fl
 
 | Platform | File |
 | --- | --- |
-| Windows 10/11 x64 | `floorplan3d_1.3.0_windows_amd64.zip` |
-| Windows 10/11 ARM64 | `floorplan3d_1.3.0_windows_arm64.zip` |
-| macOS Apple Silicon (M-series) | `floorplan3d_1.3.0_darwin_arm64.zip` |
-| macOS Intel | `floorplan3d_1.3.0_darwin_amd64.zip` |
-| Linux x86-64 | `floorplan3d_1.3.0_linux_amd64.zip` |
-| Linux ARM64 (Raspberry Pi etc.) | `floorplan3d_1.3.0_linux_arm64.zip` |
+| Windows 10/11 x64 | `floorplan3d_1.4.0_windows_amd64.zip` |
+| Windows 10/11 ARM64 | `floorplan3d_1.4.0_windows_arm64.zip` |
+| macOS Apple Silicon (M-series) | `floorplan3d_1.4.0_darwin_arm64.zip` |
+| macOS Intel | `floorplan3d_1.4.0_darwin_amd64.zip` |
+| Linux x86-64 | `floorplan3d_1.4.0_linux_amd64.zip` |
+| Linux ARM64 (Raspberry Pi etc.) | `floorplan3d_1.4.0_linux_arm64.zip` |
 
 The binary is a static single file (~11 MB; `index.html` and three.js are embedded). No Go, Node or SQLite install required. Plans and the materials list live in `data/plan.db` next to the binary — copy that folder to move everything to another machine.
 
@@ -86,10 +100,16 @@ make            # current platform → dist/floorplan3d
 make release    # all six platforms as zips + SHA256SUMS → dist/
 make run        # go run .
 make test       # Go unit tests (API + sub-path routing)
+make check      # front-end syntax gate (no browser needed)
+make e2e        # end-to-end: headless Chrome clicks real buttons (Node 22+)
 make clean      # remove dist/
 ```
 
-The front-end quantity, budget and style-pack math has an assertion self-check: open `http://localhost:8787/?selftest=1`, results go to the console and to `window.__selftest` (50 assertions covering flooring area totals, door/window counts, labour rows, budget formulas, note persistence and the print sheet).
+CI (`.github/workflows/ci.yml`) runs gofmt / vet / go test / six-platform cross-compile + artifacts / the front-end syntax gate / `?selftest=1` assertions / the CDP end-to-end clicks.
+
+The front-end quantity, budget and style-pack math has an assertion self-check: open `http://localhost:8787/?selftest=1`, results go to the console and to `window.__selftest` (65 assertions covering flooring area totals, door/window counts, labour rows, budget formulas, cost per m², price tiers, note persistence and the print sheet)
+
+The end-to-end script `node scripts/e2e.mjs --url http://127.0.0.1:8787/` drives real clicks over CDP with 18 checks: generate the list → toggle "already have" and watch the budget → switch price tiers (including "hand-edited price is never overwritten") → overspend warning → print sheets → 3D entry and showroom viewpoints → no JS exceptions..
 
 Targets: `linux/{amd64,arm64}`, `darwin/{amd64,arm64}`, `windows/{amd64,arm64}`.
 
@@ -111,6 +131,8 @@ Cross-compiling works because the SQLite driver is a [pure-Go implementation](ht
 - Toggle between full-height and cut-away walls, time-of-day sunlight slider, night lighting
 - Detailed furniture models: cabinet door gaps and handles, upholstered headboards, metal and ceramic materials with environment reflections, and more
 - Select and drag furniture in 3D as well, kept in sync with the 2D plan in real time
+- **Showroom viewpoints**: "Showroom · eye-level" in the sidebar drops you inside a room (entry / living / dining / kitchen / master / bedroom A / bath) at 1.55 m with full-height walls; the standing spot is sampled on a grid so it never lands in a wall or a wardrobe
+- **Close-up (局部放大)**: switch the mode to "Close-up" and click a room to cut the walls and frame just that room; `?view=3d&closeup=bedB` opens it directly
 
 **Style packs (10)**
 - One dropdown in the top bar switches the whole scheme: Modern Minimal / New Chinese / Mediterranean / Nordic / Japandi / Cream / Modern Luxe / Industrial / French Classic / American Classic
@@ -140,6 +162,7 @@ Cross-compiling works because the SQLite driver is a [pure-Go implementation](ht
 
 - Brand, spec, notes and price are yours to fill and **survive regeneration**; unit prices are references — replace them with your quotes
 - The "brand" field suggests 50+ common brands (Shengxiang / Marco Polo / Nippon / Kohler / Oppein / Oriental Yuhong / Haier …) while still accepting free text
+- **"Already have" chips**: flooring / paint (incl. putty) / cables / waterproofing — one click removes them from both the list and the budget (keyed by a stable id, so renaming a row cannot break it); click again to restore
 - Editing a quantity or price updates the budget bar and category subtotals immediately
 - Export to CSV (with BOM, opens directly in Excel)
 
@@ -147,14 +170,21 @@ Cross-compiling works because the SQLite driver is a [pure-Go implementation](ht
 - Total = Σ (qty × price); set a **budget cap** and the top progress bar shows the remaining amount or the overspend in red
 - A **reserve percentage** (10% by default) is added to the total so "looks fine, bills over" is less likely
 - "Subtotals by category" sorts categories by amount so you can see where the money goes (flooring / doors & windows / walls / cabinets…)
+- **Cost per m²** and the **labour share** are shown right in the budget bar (and in the brief and the printed sheet): about ¥2,242/m² for the 102 m² sample
+- **Price tiers**: budget ×0.75 / standard ×1 / premium ×1.5. Only rows still carrying a *reference* price are scaled — anything you typed yourself is flagged and never overwritten
 - The side panel also shows a budget card: materials total / with reserve / cap / remaining
+
+**Schedule estimate**
+- Reference days per phase: demolition (by wall length), plumbing & electrical (by area), tiling (by tiled area), carpentry (by ceiling area), painting (by painted area), installation (by room count), plus a total in days/weeks
+- Included in the Markdown brief and the printed quote — no Gantt chart, just enough to plan with a contractor
 
 **Decoration notes**
 - Every row has a free-form note (brand, workmanship, acceptance criteria)
 - Two project-level notes at the bottom of the list: **requirements & style brief** and **site / workmanship notes**
 - A note per room (open a room in the side panel), e.g. "headboard wall panelling", "leave space for a dishwasher"
 - "File → Export brief (Markdown)" packs the style, areas, requirements, site notes, room notes, budget table and the full materials list into one `.md` you can send straight to a designer or contractor
-- "Print / PDF" in the materials dialog renders a plain-text A4 landscape quote sheet (with category subtotals and notes) ready to print or save as PDF; `?print=1` previews it on screen first
+- "Print / PDF" in the materials dialog renders a plain-text A4 landscape quote sheet (list + category subtotals + schedule + notes); input contents are never clipped. `?print=1` previews it on screen
+- "File → Plan drawing (PDF)" outputs a drawing sheet: the current plan plus room areas/flooring, changes/doors/windows and a material legend, A4 portrait; `?print=plan` previews it
 
 **Plans & statistics**
 - Automatic calculation of room areas and net usable floor area
@@ -162,6 +192,18 @@ Cross-compiling works because the SQLite driver is a [pure-Go implementation](ht
 - Undo / redo; the plan and materials list are saved to SQLite (`data/plan.db`), falling back to browser storage when opened as a `file://` page
 - Chinese / English UI toggle (top-right button; defaults to Chinese and remembers your choice)
 - Export to PNG, export / import plans as JSON (materials list included)
+
+## Links & debug parameters
+
+| URL | Effect |
+| --- | --- |
+| `?view=3d&show=living` | open 3D and stand in the living-room showroom viewpoint (`show=bedB` / `kitchen` / `__entry` …) |
+| `?view=3d&closeup=bedB` | open the master-bedroom close-up (cut-away walls) |
+| `?print=1` / `?print=plan` | print preview: quote sheet / plan drawing |
+| `?selftest=1` | run the 66 front-end assertions; results go to the console and `#selftestResult` |
+| `?demo=1` | generate the materials list from the plan when it is empty (demo / screenshots) |
+| `?bom=1` | open the materials dialog on load |
+| `?still=1` | skip 3D camera animations (headless screenshots) |
 
 ## Keyboard shortcuts
 
